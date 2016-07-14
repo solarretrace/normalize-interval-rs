@@ -34,8 +34,9 @@ use std::fmt;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Determines the type of an interval's boundary.
+// Bound<T>
 ////////////////////////////////////////////////////////////////////////////////
+/// Determines the type of an interval's boundary.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// The boundary includes the point.
@@ -206,9 +207,10 @@ impl<T> Deref for Bound<T> where T: PartialOrd + PartialEq + Clone {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Interval<T>
+////////////////////////////////////////////////////////////////////////////////
 /// A contiguous range of the type T, which may include or exclude either 
 /// boundary.
-////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Interval<T> where T: PartialOrd + PartialEq + Clone {
     /// The start of the range.
@@ -570,41 +572,53 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
             None
         } else {
             // Overlapping.
-            Some(Interval::new(
-                 a.left_bound().union_or_least(&b.left_bound()),
-                 Some(a.right_bound().union_or_greatest(&b.right_bound()))
-            ))
+            Some(Interval {
+                start: a.left_bound().union_or_least(&b.left_bound()),
+                end: a.right_bound().union_or_greatest(&b.right_bound()),
+            })
         }
     }
 
-    /// Returns the smallest interval containing both of the given intervals, or
-    /// `None` if both are empty.
+    /// Returns the smallest interval containing all of the points in the given
+    /// intervals, or `None` if all the intervals are empty.
     ///
     /// # Example
     ///
     /// ```rust
     /// use interval::Interval;
     ///
-    /// let a = Interval::closed(0.0, 0.0);
-    /// let b = Interval::open(2.0, 3.0);
+    /// let res = Interval::enclose(vec![
+    ///     Interval::open(1.0, 2.0),
+    ///     Interval::open(2.0, 3.0),
+    ///     Interval::open(2.5, 3.5),
+    ///     Interval::closed(3.0, 3.0),
+    ///     Interval::open(0.0, 1.5),
+    ///     Interval::open(6.0, 6.0),
+    /// ].into_iter());
     /// 
-    /// assert_eq!(a.connect(&b), Some(Interval::right_open(0.0, 3.0)));
-    /// ```
-    pub fn connect(&self, other: &Self) -> Option<Self> {
-        if self.is_empty() && other.is_empty() {
-            None
-        } else if self.is_empty() {
-            Some(other.clone())
-        } else if other.is_empty() {
-            Some(self.clone())
+    /// assert_eq!(
+    ///     res, 
+    ///     Some(Interval::open(0.0, 3.5))
+    /// );
+    pub fn enclose<I>(intervals: I) -> Option<Interval<T>>
+        where I: IntoIterator<Item=Interval<T>>
+    {
+        // Find first non-empty interval.
+        let mut ints = intervals.into_iter().skip_while(|i| i.is_empty());
+        let first_non_empty = ints.next();
+
+        if let Some(first) = first_non_empty {
+            Some(ints.fold(first, |acc, int| {
+                if int.is_empty() {
+                    acc
+                } else {
+                    Interval::new(
+                        acc.left_bound().union_or_least(&int.left_bound()), Some(acc.right_bound().union_or_greatest(&int.right_bound()))
+                    )
+                }
+            }))
         } else {
-            Some(Interval::new(
-                self.left_bound()
-                    .union_or_least(&other.left_bound()),
-                Some(self.right_bound()
-                    .union_or_greatest(&other.right_bound())
-                )
-            ))
+            None
         }
     }
 

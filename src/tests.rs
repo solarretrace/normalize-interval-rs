@@ -206,86 +206,87 @@ fn interval_union() {
 /// Tests the Interval::connect function.
 #[test]
 fn interval_connect() {
+    use super::Interval as I;
     let o: fn(f32, f32) -> Interval<f32> = Interval::open;
     let c: fn(f32, f32) -> Interval<f32> = Interval::closed;
     let lo: fn(f32, f32) -> Interval<f32> = Interval::left_open;
     let ro: fn(f32, f32) -> Interval<f32> = Interval::right_open;
 
     // Open overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.0, 2.0)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.0, 2.0)), Some(lo(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.0, 2.0)), Some(ro(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.0, 2.0)), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.0, 2.0)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.0, 2.0)]), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.0, 2.0)]), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.0, 2.0)]), Some( c(1.0, 2.0)));
 
     // Closed overlapping.
-    assert_eq!( c(1.0, 2.0).connect(& o(1.0, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&lo(1.0, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&ro(1.0, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(& c(1.0, 2.0)), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  o(1.0, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), lo(1.0, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), ro(1.0, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  c(1.0, 2.0)]), Some( c(1.0, 2.0)));
     
     // Open left-half overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.0, 1.5)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.0, 1.5)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.0, 1.5)), Some(ro(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.0, 1.5)), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.0, 1.5)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.0, 1.5)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.0, 1.5)]), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.0, 1.5)]), Some(ro(1.0, 2.0)));
 
     // Close left-half overlapping.
-    assert_eq!( c(1.0, 2.0).connect(& o(1.0, 1.5)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&lo(1.0, 1.5)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&ro(1.0, 1.5)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(& c(1.0, 1.5)), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  o(1.0, 1.5)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), lo(1.0, 1.5)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), ro(1.0, 1.5)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  c(1.0, 1.5)]), Some( c(1.0, 2.0)));
 
     // Open right-half overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.5, 2.0)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.5, 2.0)), Some(lo(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.5, 2.0)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.5, 2.0)), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.5, 2.0)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.5, 2.0)]), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.5, 2.0)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.5, 2.0)]), Some(lo(1.0, 2.0)));
 
     // Closed right-half overlapping.
-    assert_eq!( c(1.0, 2.0).connect(& o(1.5, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&lo(1.5, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&ro(1.5, 2.0)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(& c(1.5, 2.0)), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  o(1.5, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), lo(1.5, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), ro(1.5, 2.0)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  c(1.5, 2.0)]), Some( c(1.0, 2.0)));
 
     // Open Subset overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.2, 1.8)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.2, 1.8)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.2, 1.8)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.2, 1.8)), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.2, 1.8)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.2, 1.8)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.2, 1.8)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.2, 1.8)]), Some( o(1.0, 2.0)));
 
     // Closed Subset overlapping.
-    assert_eq!( c(1.0, 2.0).connect(& o(1.2, 1.8)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&lo(1.2, 1.8)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(&ro(1.2, 1.8)), Some( c(1.0, 2.0)));
-    assert_eq!( c(1.0, 2.0).connect(& c(1.2, 1.8)), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  o(1.2, 1.8)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), lo(1.2, 1.8)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0), ro(1.2, 1.8)]), Some( c(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![c(1.0, 2.0),  c(1.2, 1.8)]), Some( c(1.0, 2.0)));
 
     // Right non-overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(2.0, 3.0)), Some( o(1.0, 3.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(2.0, 3.0)), Some(lo(1.0, 3.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(2.0, 3.0)), Some( o(1.0, 3.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(2.0, 3.0)), Some(lo(1.0, 3.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(2.0, 3.0)]), Some( o(1.0, 3.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(2.0, 3.0)]), Some(lo(1.0, 3.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(2.0, 3.0)]), Some( o(1.0, 3.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(2.0, 3.0)]), Some(lo(1.0, 3.0)));
 
     // Left non-overlapping.
-    assert_eq!( o(1.0, 2.0).connect(& o(0.0, 1.0)), Some( o(0.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(0.0, 1.0)), Some( o(0.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(0.0, 1.0)), Some(ro(0.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(0.0, 1.0)), Some(ro(0.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(0.0, 1.0)]), Some( o(0.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(0.0, 1.0)]), Some( o(0.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(0.0, 1.0)]), Some(ro(0.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(0.0, 1.0)]), Some(ro(0.0, 2.0)));
 
     // Center Point connects.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.5, 1.5)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.5, 1.5)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.5, 1.5)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.5, 1.5)), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.5, 1.5)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.5, 1.5)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.5, 1.5)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.5, 1.5)]), Some( o(1.0, 2.0)));
 
     // Left Point connects.
-    assert_eq!( o(1.0, 2.0).connect(& o(1.0, 1.0)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(1.0, 1.0)), Some(ro(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(1.0, 1.0)), Some(ro(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(1.0, 1.0)), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(1.0, 1.0)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(1.0, 1.0)]), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(1.0, 1.0)]), Some(ro(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(1.0, 1.0)]), Some(ro(1.0, 2.0)));
 
     // Right Point connects.
-    assert_eq!( o(1.0, 2.0).connect(& o(2.0, 2.0)), Some( o(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&lo(2.0, 2.0)), Some(lo(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(&ro(2.0, 2.0)), Some(lo(1.0, 2.0)));
-    assert_eq!( o(1.0, 2.0).connect(& c(2.0, 2.0)), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  o(2.0, 2.0)]), Some( o(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), lo(2.0, 2.0)]), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0), ro(2.0, 2.0)]), Some(lo(1.0, 2.0)));
+    assert_eq!(I::enclose(vec![o(1.0, 2.0),  c(2.0, 2.0)]), Some(lo(1.0, 2.0)));
 }
