@@ -59,6 +59,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// assert_eq!(b1.value(), &0);
     /// assert_eq!(b2.value(), &1);
     /// ```
+    #[inline]
     pub fn value(&self) -> &T {
         match *self {
             Bound::Included(ref bound) => bound,
@@ -118,6 +119,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// 
     /// assert_eq!(b1.intersect_or_least(&b2), b2);
     /// ```
+    #[inline]
     pub fn intersect_or_least(&self, other: &Self) -> Self {
         if self.value() == other.value() {
             if self.is_closed() && other.is_closed() {
@@ -145,6 +147,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// 
     /// assert_eq!(b1.intersect_or_greatest(&b2), b2);
     /// ```
+    #[inline]
     pub fn intersect_or_greatest(&self, other: &Self) -> Self {
         if self.value() == other.value() {
             if self.is_closed() && other.is_closed() {
@@ -172,6 +175,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// 
     /// assert_eq!(b1.union_or_least(&b2), b1);
     /// ```
+    #[inline]
     pub fn union_or_least(&self, other: &Self) -> Self {
         if self.value() == other.value() {
             if self.is_open() && other.is_open() {
@@ -199,6 +203,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// 
     /// assert_eq!(b1.union_or_greatest(&b2), b1);
     /// ```
+    #[inline]
     pub fn union_or_greatest(&self, other: &Self) -> Self {
         if self.value() == other.value() {
             if self.is_open() && other.is_open() {
@@ -256,6 +261,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// assert_eq!(int.left_point(), 12);
     /// assert_eq!(int.right_point(), 16);
     /// ```
+    #[inline]
     pub fn new(start: Bound<T>, end: Option<Bound<T>>) -> Self {
         if let Some(end_bound) = end {
             Interval {
@@ -281,6 +287,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// assert_eq!(int.right_point(), 2);
     /// assert!(!int.right_bound().is_closed());
     /// ```
+    #[inline]
     pub fn open(start: T, end: T) -> Self {
         Interval::new(
             Bound::Excluded(start),
@@ -302,6 +309,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// assert_eq!(int.right_point(), 2);
     /// assert!(int.right_bound().is_closed());
     /// ```
+    #[inline]
     pub fn closed(start: T, end: T) -> Self {
         Interval::new(
             Bound::Included(start),
@@ -323,6 +331,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// assert_eq!(int.right_point(), 2);
     /// assert!(int.right_bound().is_closed());
     /// ```
+    #[inline]
     pub fn left_open(start: T, end: T) -> Self {
         Interval::new(
             Bound::Excluded(start),
@@ -344,6 +353,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// assert_eq!(int.right_point(), 2);
     /// assert!(!int.right_bound().is_closed());
     /// ```
+    #[inline]
     pub fn right_open(start: T, end: T) -> Self {
         Interval::new(
             Bound::Included(start),
@@ -471,7 +481,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// let int = Interval::open(0, 1);
     /// assert_eq!(int.into_non_empty(), Some(int));
     /// ```
-    ///
+    #[inline]
     pub fn into_non_empty(self) -> Option<Self> {
         if self.is_empty() {
             None
@@ -711,6 +721,7 @@ impl <'a, T> Interval<T>
     ///
     /// assert_eq!(int.width(), 0.0);
     /// ```
+    #[inline]
     pub fn width(&'a self) -> <&'a T as Sub>::Output 
         where <&'a T as Sub>::Output: Default 
     {
