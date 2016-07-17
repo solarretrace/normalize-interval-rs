@@ -622,7 +622,10 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
                     acc
                 } else {
                     Interval::new(
-                        acc.left_bound().union_or_least(&int.left_bound()), Some(acc.right_bound().union_or_greatest(&int.right_bound()))
+                        acc.left_bound()
+                            .union_or_least(&int.left_bound()), 
+                        Some(acc.right_bound()
+                            .union_or_greatest(&int.right_bound()))
                     )
                 }
             }))
