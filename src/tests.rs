@@ -203,9 +203,9 @@ fn interval_union() {
     assert_eq!( o(1.0, 2.0).union(& c(2.0, 2.0)), Some(lo(1.0, 2.0)));
 }
 
-/// Tests the Interval::connect function.
+/// Tests the Interval::enclose function.
 #[test]
-fn interval_connect() {
+fn interval_enclose() {
     use super::Interval as I;
     let o: fn(f32, f32) -> Interval<f32> = Interval::open;
     let c: fn(f32, f32) -> Interval<f32> = Interval::closed;

@@ -28,7 +28,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::ops::{Deref, Sub};
+use std::ops::Sub;
 use std::mem;
 use std::fmt;
 
@@ -46,6 +46,26 @@ pub enum Bound<T> where T: PartialOrd + PartialEq + Clone {
 }
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
+    /// Returns the value of the bound.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use interval::Bound;
+    ///
+    /// let b1 = Bound::Included(0);
+    /// let b2 = Bound::Excluded(1);
+    /// 
+    /// assert_eq!(b1.value(), &0);
+    /// assert_eq!(b2.value(), &1);
+    /// ```
+    pub fn value(&self) -> &T {
+        match *self {
+            Bound::Included(ref bound) => bound,
+            Bound::Excluded(ref bound) => bound
+        }
+    }
+
     /// Returns whether the boundary includes its point.
     ///
     /// # Example
@@ -61,9 +81,9 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn is_closed(&self) -> bool {
-        match self {
-            &Bound::Included(..) => true,
-            &Bound::Excluded(..) => false
+        match *self {
+            Bound::Included(..) => true,
+            Bound::Excluded(..) => false
         }
     }
 
@@ -99,13 +119,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// assert_eq!(b1.intersect_or_least(&b2), b2);
     /// ```
     pub fn intersect_or_least(&self, other: &Self) -> Self {
-        if **self == **other {
+        if self.value() == other.value() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded((**self).clone())
+                Bound::Excluded(self.value().clone())
             }
-        } else if **self < **other {
+        } else if self.value() < other.value() {
             self.clone()
         } else {
             other.clone()
@@ -126,13 +146,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// assert_eq!(b1.intersect_or_greatest(&b2), b2);
     /// ```
     pub fn intersect_or_greatest(&self, other: &Self) -> Self {
-        if **self == **other {
+        if self.value() == other.value() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded((**self).clone())
+                Bound::Excluded(self.value().clone())
             }
-        } else if **self > **other {
+        } else if self.value() > other.value() {
             self.clone()
         } else {
             other.clone()
@@ -153,13 +173,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// assert_eq!(b1.union_or_least(&b2), b1);
     /// ```
     pub fn union_or_least(&self, other: &Self) -> Self {
-        if **self == **other {
+        if self.value() == other.value() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included((**self).clone())
+                Bound::Included(self.value().clone())
             }
-        } else if **self < **other {
+        } else if self.value() < other.value() {
             self.clone()
         } else {
             other.clone()
@@ -180,13 +200,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// assert_eq!(b1.union_or_greatest(&b2), b1);
     /// ```
     pub fn union_or_greatest(&self, other: &Self) -> Self {
-        if **self == **other {
+        if self.value() == other.value() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included((**self).clone())
+                Bound::Included(self.value().clone())
             }
-        } else if **self > **other {
+        } else if self.value() > other.value() {
             self.clone()
         } else {
             other.clone()
@@ -194,17 +214,6 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     }
 }
 
-// Implemented to prevent having to match on the Bound enum to use its 
-// contents.
-impl<T> Deref for Bound<T> where T: PartialOrd + PartialEq + Clone {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        match *self {
-            Bound::Included(ref bound) => bound,
-            Bound::Excluded(ref bound) => bound
-        }
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
@@ -356,7 +365,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn left_point(&self) -> T {
-        (*self.start).clone()
+        self.start.value().clone()
     }
 
     /// Returns the rightmost (greatest) boundary point of the interval. Note 
@@ -374,7 +383,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn right_point(&self) -> T {
-        (*self.end).clone()
+        self.end.value().clone()
     }
 
     /// Returns the left (least) boundary of the interval.
@@ -702,7 +711,7 @@ impl <'a, T> Interval<T>
     pub fn width(&'a self) -> <&'a T as Sub>::Output 
         where <&'a T as Sub>::Output: Default 
     {
-        &*self.end - &*self.start
+        self.end.value() - self.start.value()
     }
 }
 
