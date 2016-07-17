@@ -46,7 +46,7 @@ pub enum Bound<T> where T: PartialOrd + PartialEq + Clone {
 }
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
-    /// Returns the value of the bound.
+    /// Returns the point marking at the bound.
     ///
     /// # Example
     ///
@@ -56,11 +56,11 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// let b1 = Bound::Included(0);
     /// let b2 = Bound::Excluded(1);
     /// 
-    /// assert_eq!(b1.value(), &0);
-    /// assert_eq!(b2.value(), &1);
+    /// assert_eq!(b1.point(), &0);
+    /// assert_eq!(b2.point(), &1);
     /// ```
     #[inline]
-    pub fn value(&self) -> &T {
+    pub fn point(&self) -> &T {
         match *self {
             Bound::Included(ref bound) => bound,
             Bound::Excluded(ref bound) => bound
@@ -121,13 +121,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn intersect_or_least(&self, other: &Self) -> Self {
-        if self.value() == other.value() {
+        if self.point() == other.point() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded(self.value().clone())
+                Bound::Excluded(self.point().clone())
             }
-        } else if self.value() < other.value() {
+        } else if self.point() < other.point() {
             self.clone()
         } else {
             other.clone()
@@ -149,13 +149,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn intersect_or_greatest(&self, other: &Self) -> Self {
-        if self.value() == other.value() {
+        if self.point() == other.point() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded(self.value().clone())
+                Bound::Excluded(self.point().clone())
             }
-        } else if self.value() > other.value() {
+        } else if self.point() > other.point() {
             self.clone()
         } else {
             other.clone()
@@ -177,13 +177,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn union_or_least(&self, other: &Self) -> Self {
-        if self.value() == other.value() {
+        if self.point() == other.point() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included(self.value().clone())
+                Bound::Included(self.point().clone())
             }
-        } else if self.value() < other.value() {
+        } else if self.point() < other.point() {
             self.clone()
         } else {
             other.clone()
@@ -205,13 +205,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn union_or_greatest(&self, other: &Self) -> Self {
-        if self.value() == other.value() {
+        if self.point() == other.point() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included(self.value().clone())
+                Bound::Included(self.point().clone())
             }
-        } else if self.value() > other.value() {
+        } else if self.point() > other.point() {
             self.clone()
         } else {
             other.clone()
@@ -273,7 +273,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         }
     }
 
-    /// Creates a new open interval from the given values.
+    /// Creates a new open interval from the given points.
     ///
     /// # Example
     ///
@@ -295,7 +295,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         )
     }
 
-    /// Creates a new closed interval from the given values.
+    /// Creates a new closed interval from the given points.
     ///
     /// # Example
     ///
@@ -317,7 +317,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         )
     }
 
-    /// Creates a new left-open interval from the given values.
+    /// Creates a new left-open interval from the given points.
     ///
     /// # Example
     ///
@@ -339,7 +339,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         )
     }
 
-    /// Creates a new right-open interval from the given values.
+    /// Creates a new right-open interval from the given points.
     ///
     /// # Example
     ///
@@ -375,7 +375,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn left_point(&self) -> T {
-        self.start.value().clone()
+        self.start.point().clone()
     }
 
     /// Returns the rightmost (greatest) boundary point of the interval. Note 
@@ -393,7 +393,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn right_point(&self) -> T {
-        self.end.value().clone()
+        self.end.point().clone()
     }
 
     /// Returns the left (least) boundary of the interval.
@@ -627,15 +627,15 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         let first_non_empty = ints.next();
 
         if let Some(first) = first_non_empty {
-            Some(ints.fold(first, |acc, int| {
-                if int.is_empty() {
+            Some(ints.fold(first, |acc, next_interval| {
+                if next_interval.is_empty() {
                     acc
                 } else {
                     Interval::new(
                         acc.left_bound()
-                            .union_or_least(&int.left_bound()), 
+                            .union_or_least(&next_interval.left_bound()), 
                         Some(acc.right_bound()
-                            .union_or_greatest(&int.right_bound()))
+                            .union_or_greatest(&next_interval.right_bound()))
                     )
                 }
             }))
@@ -672,22 +672,22 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         // Remove empty intervals.
         let mut it = intervals
             .into_iter()
-            .filter(|int| !int.is_empty());
+            .filter(|interval| !interval.is_empty());
 
         // Get first interval.
         if let Some(start) = it.next() {
-
-            it.fold(vec![start], |mut prev, int| {
+            // Fold over remaining intervals.
+            it.fold(vec![start], |mut prev, next_interval| {
                 let mut append = true;
                 for item in prev.iter_mut() {
-                    if let Some(val) = item.union(&int) {
-                        // Union with int succeeded.
+                    if let Some(val) = item.union(&next_interval) {
+                        // Union with next_interval succeeded.
                         mem::replace(item, val);
                         append = false;
                         break;
                     }
                 }
-                if append {prev.push(int);}
+                if append {prev.push(next_interval);}
                 prev
             })
         } else {
@@ -713,7 +713,7 @@ impl <'a, T> Interval<T>
     /// assert_eq!(int.width(), 2.2);
     /// ```
     ///
-    /// If the interval is empty, a default value is returned:
+    /// If the interval is empty, a default point is returned:
     ///
     /// ```rust
     /// # use interval::{Interval, Bound};
@@ -725,7 +725,7 @@ impl <'a, T> Interval<T>
     pub fn width(&'a self) -> <&'a T as Sub>::Output 
         where <&'a T as Sub>::Output: Default 
     {
-        self.end.value() - self.start.value()
+        self.end.point() - self.start.point()
     }
 }
 
