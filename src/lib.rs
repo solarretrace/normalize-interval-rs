@@ -227,6 +227,14 @@ impl<T> Default for Bound<T> where T: Default {
     }
 }
 
+// Bound-from-Point conversion.
+impl<T> From<T> for Bound<T> {
+    fn from(t: T) -> Self {
+        Bound::Included(t)
+    }
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
@@ -747,5 +755,12 @@ impl<T> fmt::Display for Interval<T>
             self.right_point(),
             if self.left_bound().is_open() {")"} else {"]"},
         )
+    }
+}
+
+// Interval-from-Point conversion.
+impl<T> From<T> for Interval<T> where T: PartialOrd + PartialEq + Clone {
+    fn from(t: T) -> Self {
+        Interval::closed(t.clone(), t)
     }
 }
