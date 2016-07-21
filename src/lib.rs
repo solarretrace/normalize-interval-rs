@@ -29,6 +29,7 @@
 mod tests;
 
 use std::ops::Sub;
+use std::default::Default;
 use std::mem;
 use std::fmt;
 
@@ -223,13 +224,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
-/// A contiguous range of the type T, which may include or exclude either 
+/// A contiguous interval of the type T, which may include or exclude either 
 /// boundary.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Interval<T> where T: PartialOrd + PartialEq + Clone {
-    /// The start of the range.
+    /// The start of the interval.
     start: Bound<T>,
-    /// The end of the range.
+    /// The end of the interval.
     end: Bound<T>
 }
 
@@ -740,5 +741,14 @@ impl<T> fmt::Display for Interval<T>
             self.right_point(),
             if self.left_bound().is_open() {")"} else {"]"},
         )
+    }
+}
+
+// Default interval defers to default of T.
+impl<T> Default for Interval<T> 
+    where T: Default + PartialOrd + PartialEq + Clone
+{
+    fn default() -> Self {
+        Interval::closed(Default::default(), Default::default())
     }
 }
