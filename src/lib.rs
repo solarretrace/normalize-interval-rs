@@ -234,25 +234,6 @@ impl<T> From<T> for Bound<T> {
     }
 }
 
-// Access inner by ref.
-impl<T> AsRef<T> for Bound<T> {
-    fn as_ref(&self) -> &T {
-        match self {
-            &Bound::Included(ref t) => t,
-            &Bound::Excluded(ref t) => t,
-        }
-    }
-}
-
-// Access inner by mut ref.
-impl<T> AsMut<T> for Bound<T> {
-    fn as_mut(&mut self) -> &mut T {
-        match self {
-            &mut Bound::Included(ref mut t) => t,
-            &mut Bound::Excluded(ref mut t) => t,
-        }
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
