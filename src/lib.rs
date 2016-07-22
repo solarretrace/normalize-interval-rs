@@ -739,6 +739,17 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         self.end.point() - self.start.point()
     }
 
+    /// Shortens the interval by croping from the left by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.left_crop(3);
+    ///
+    /// assert_eq!(int, Interval::open(3, 20));
+    /// ```
     pub fn left_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
@@ -752,6 +763,17 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         );
     }
 
+    /// Shortens the interval by croping from the right by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.right_crop(3);
+    ///
+    /// assert_eq!(int, Interval::open(0, 17));
+    /// ```
     pub fn right_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
@@ -765,6 +787,17 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         );
     }
 
+    /// Lengthens the interval by extending the left by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.left_extend(3);
+    ///
+    /// assert_eq!(int, Interval::open(-3, 20));
+    /// ```
     pub fn left_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
@@ -778,6 +811,17 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         );
     }
 
+    /// Lengthens the interval by extending the right by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.right_extend(3);
+    ///
+    /// assert_eq!(int, Interval::open(0, 23));
+    /// ```
     pub fn right_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
