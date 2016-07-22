@@ -28,7 +28,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use std::default::Default;
 use std::mem;
 use std::fmt;
@@ -234,6 +234,25 @@ impl<T> From<T> for Bound<T> {
     }
 }
 
+// Access inner by ref.
+impl<T> AsRef<T> for Bound<T> {
+    fn as_ref(&self) -> &T {
+        match self {
+            &Bound::Included(ref t) => t,
+            &Bound::Excluded(ref t) => t,
+        }
+    }
+}
+
+// Access inner by mut ref.
+impl<T> AsMut<T> for Bound<T> {
+    fn as_mut(&mut self) -> &mut T {
+        match self {
+            &mut Bound::Included(ref mut t) => t,
+            &mut Bound::Excluded(ref mut t) => t,
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
@@ -248,7 +267,7 @@ pub struct Interval<T> {
     end: Bound<T>
 }
 
-impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
+impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// Creates a new interval from the given boundaries.
     ///
     /// # Example
@@ -709,14 +728,7 @@ impl <T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
             Vec::new()
         }
     }
-}
 
-
-impl <'a, T> Interval<T> 
-    where 
-        T: PartialOrd + PartialEq + Clone + 'a, 
-        &'a T: Sub  
-{
     /// Returns the width of the interval.
     ///
     /// # Examples
@@ -737,10 +749,65 @@ impl <'a, T> Interval<T>
     /// assert_eq!(int.width(), 0.0);
     /// ```
     #[inline]
-    pub fn width(&'a self) -> <&'a T as Sub>::Output 
-        where <&'a T as Sub>::Output: Default 
+    pub fn width<'a>(&'a self) -> <&'a T as Sub>::Output 
+        where 
+            T: PartialOrd + PartialEq + Clone + 'a, 
+            &'a T: Sub,
+            <&'a T as Sub>::Output: Default 
     {
         self.end.point() - self.start.point()
+    }
+
+    pub fn left_crop(&mut self, amount: T)
+        where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
+    {
+        let temp = self.clone();
+        mem::replace(self, Interval::new(
+            match temp.start {
+                Bound::Included(t) => Bound::Included(t + amount),
+                Bound::Excluded(t) => Bound::Excluded(t + amount),
+            },
+            Some(temp.end))
+        );
+    }
+
+    pub fn right_crop(&mut self, amount: T)
+        where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
+    {
+        let temp = self.clone();
+        mem::replace(self, Interval::new(
+            temp.start,
+            Some(match temp.end {
+                Bound::Included(t) => Bound::Included(t - amount),
+                Bound::Excluded(t) => Bound::Excluded(t - amount),
+            }))
+        );
+    }
+
+    pub fn left_extend(&mut self, amount: T)
+        where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
+    {
+        let temp = self.clone();
+        mem::replace(self, Interval::new(
+            match temp.start {
+                Bound::Included(t) => Bound::Included(t - amount),
+                Bound::Excluded(t) => Bound::Excluded(t - amount),
+            },
+            Some(temp.end))
+        );
+    }
+
+    pub fn right_extend(&mut self, amount: T)
+        where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
+    {
+        let temp = self.clone();
+        mem::replace(self, Interval::new(
+            temp.start,
+            Some(match temp.end {
+                Bound::Included(t) => Bound::Included(t + amount),
+                Bound::Excluded(t) => Bound::Excluded(t + amount),
+            }))
+        );
     }
 }
 
