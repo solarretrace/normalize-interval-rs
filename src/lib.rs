@@ -544,6 +544,44 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         self.end.as_ref() - self.start.as_ref()
     }
 
+    /// Shifts the interval to the left by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.left_shift(3);
+    ///
+    /// assert_eq!(int, Interval::open(-3, 17));
+    /// ```
+    #[inline]
+    pub fn left_shift(&mut self, amount: T) where T: Sub<Output=T> {
+        let s = self.start.as_ref().clone();
+        let e = self.end.as_ref().clone();
+        mem::replace(self.start.as_mut(), s - amount.clone());
+        mem::replace(self.end.as_mut(), e - amount);
+    }
+
+    /// Shifts the interval to the right by the given amount.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.right_shift(3);
+    ///
+    /// assert_eq!(int, Interval::open(3, 23));
+    /// ```
+    #[inline]
+    pub fn right_shift(&mut self, amount: T) where T: Add<Output=T> {
+        let s = self.start.as_ref().clone();
+        let e = self.end.as_ref().clone();
+        mem::replace(self.start.as_mut(), s + amount.clone());
+        mem::replace(self.end.as_mut(), e + amount);
+    }
+
     /// Shortens the interval by croping from the left by the given amount.
     ///
     /// # Examples
@@ -555,6 +593,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(3, 20));
     /// ```
+    #[inline]
     pub fn left_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
@@ -579,6 +618,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(0, 17));
     /// ```
+    #[inline]
     pub fn right_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
@@ -603,6 +643,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(-3, 20));
     /// ```
+    #[inline]
     pub fn left_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
@@ -627,6 +668,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(0, 23));
     /// ```
+    #[inline]
     pub fn right_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
@@ -640,9 +682,6 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         );
     }
 }
-
-
-
 
 // Display using interval notation.
 impl<T> fmt::Display for Interval<T> 
