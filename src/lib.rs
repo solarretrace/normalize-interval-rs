@@ -342,6 +342,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// 
     /// assert_eq!(a.intersect(&b), Some(Interval::right_open(1.0, 2.0)));
     /// ```
+    #[inline]
     pub fn intersect(&self, other: &Self) -> Option<Self> {
         // Check if either one is empty.
         if self.is_empty() || other.is_empty() {
@@ -385,6 +386,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// 
     /// assert_eq!(a.union(&b), Some(Interval::left_open(0.0, 3.0)));
     /// ```
+    #[inline]
     pub fn union(&self, other: &Self) -> Option<Self> {
         // Check for empty unions.
         if self.is_empty() && other.is_empty() {
@@ -439,6 +441,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///     res, 
     ///     Some(Interval::open(0.0, 3.5))
     /// );
+    #[inline]
     pub fn enclose<I>(intervals: I) -> Option<Interval<T>>
         where I: IntoIterator<Item=Interval<T>>
     {
@@ -486,6 +489,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///     &[Interval::open(0.0, 2.0), Interval::open(2.0, 3.5)]
     /// );
     /// ```
+    #[inline]
     pub fn normalize<I>(intervals: I) -> Vec<Interval<T>> 
         where I: IntoIterator<Item=Interval<T>>
     {   
