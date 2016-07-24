@@ -195,7 +195,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn left_point(&self) -> T {
-        self.start.point().clone()
+        self.start.as_ref().clone()
     }
 
     /// Returns the rightmost (greatest) boundary point of the interval. Note 
@@ -213,7 +213,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     /// ```
     #[inline]
     pub fn right_point(&self) -> T {
-        self.end.point().clone()
+        self.end.as_ref().clone()
     }
 
     /// Returns the left (least) boundary of the interval.
@@ -541,7 +541,7 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
             &'a T: Sub,
             <&'a T as Sub>::Output: Default 
     {
-        self.end.point() - self.start.point()
+        self.end.as_ref() - self.start.as_ref()
     }
 
     /// Shortens the interval by croping from the left by the given amount.
@@ -640,6 +640,9 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         );
     }
 }
+
+
+
 
 // Display using interval notation.
 impl<T> fmt::Display for Interval<T> 

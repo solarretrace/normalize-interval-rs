@@ -32,7 +32,8 @@ use std::default::Default;
 ////////////////////////////////////////////////////////////////////////////////
 // Bound<T>
 ////////////////////////////////////////////////////////////////////////////////
-/// Determines the type of an interval's boundary.
+/// Determines the type of an interval's boundary. `AsRef` and `AsMut` 
+/// implementations are provided to access the point at the boundary.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Bound<T> {
     /// The boundary includes the point.
@@ -42,27 +43,6 @@ pub enum Bound<T> {
 }
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
-    /// Returns the point marking at the bound.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Bound;
-    ///
-    /// let b1 = Bound::Included(0);
-    /// let b2 = Bound::Excluded(1);
-    /// 
-    /// assert_eq!(b1.point(), &0);
-    /// assert_eq!(b2.point(), &1);
-    /// ```
-    #[inline]
-    pub fn point(&self) -> &T {
-        match *self {
-            Bound::Included(ref bound) => bound,
-            Bound::Excluded(ref bound) => bound
-        }
-    }
-
     /// Returns whether the boundary includes its point.
     ///
     /// # Example
@@ -117,13 +97,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn intersect_or_least(&self, other: &Self) -> Self {
-        if self.point() == other.point() {
+        if self.as_ref() == other.as_ref() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded(self.point().clone())
+                Bound::Excluded(self.as_ref().clone())
             }
-        } else if self.point() < other.point() {
+        } else if self.as_ref() < other.as_ref() {
             self.clone()
         } else {
             other.clone()
@@ -145,13 +125,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn intersect_or_greatest(&self, other: &Self) -> Self {
-        if self.point() == other.point() {
+        if self.as_ref() == other.as_ref() {
             if self.is_closed() && other.is_closed() {
                 self.clone()
             } else {
-                Bound::Excluded(self.point().clone())
+                Bound::Excluded(self.as_ref().clone())
             }
-        } else if self.point() > other.point() {
+        } else if self.as_ref() > other.as_ref() {
             self.clone()
         } else {
             other.clone()
@@ -173,13 +153,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn union_or_least(&self, other: &Self) -> Self {
-        if self.point() == other.point() {
+        if self.as_ref() == other.as_ref() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included(self.point().clone())
+                Bound::Included(self.as_ref().clone())
             }
-        } else if self.point() < other.point() {
+        } else if self.as_ref() < other.as_ref() {
             self.clone()
         } else {
             other.clone()
@@ -201,13 +181,13 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn union_or_greatest(&self, other: &Self) -> Self {
-        if self.point() == other.point() {
+        if self.as_ref() == other.as_ref() {
             if self.is_open() && other.is_open() {
                 self.clone()
             } else {
-                Bound::Included(self.point().clone())
+                Bound::Included(self.as_ref().clone())
             }
-        } else if self.point() > other.point() {
+        } else if self.as_ref() > other.as_ref() {
             self.clone()
         } else {
             other.clone()
@@ -229,3 +209,22 @@ impl<T> From<T> for Bound<T> {
     }
 }
 
+// Access to inner point.
+impl<T> AsRef<T> for Bound<T> {
+    fn as_ref(&self) -> &T {
+        match self {
+            &Bound::Included(ref bound) => bound,
+            &Bound::Excluded(ref bound) => bound
+        }
+    }
+}
+
+// Mutable access to inner point.
+impl<T> AsMut<T> for Bound<T> {
+    fn as_mut(&mut self) -> &mut T {
+        match self {
+            &mut Bound::Included(ref mut bound) => bound,
+            &mut Bound::Excluded(ref mut bound) => bound
+        }
+    }
+}
