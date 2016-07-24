@@ -721,6 +721,7 @@ impl<T> fmt::Display for Interval<T>
 
 // Interval-from-Point conversion.
 impl<T> From<T> for Interval<T> where T: PartialOrd + PartialEq + Clone {
+    #[inline]
     fn from(t: T) -> Self {
         Interval::closed(t.clone(), t)
     }

@@ -218,6 +218,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
 // Default bound is closed.
 impl<T> Default for Bound<T> where T: Default {
+    #[inline]
     fn default() -> Self {
         Bound::Included(Default::default())
     }
@@ -225,6 +226,7 @@ impl<T> Default for Bound<T> where T: Default {
 
 // Bound-from-Point conversion.
 impl<T> From<T> for Bound<T> {
+    #[inline]
     fn from(t: T) -> Self {
         Bound::Included(t)
     }
@@ -232,6 +234,7 @@ impl<T> From<T> for Bound<T> {
 
 // Access to inner point.
 impl<T> AsRef<T> for Bound<T> {
+    #[inline]
     fn as_ref(&self) -> &T {
         match self {
             &Bound::Included(ref bound) => bound,
@@ -242,6 +245,7 @@ impl<T> AsRef<T> for Bound<T> {
 
 // Mutable access to inner point.
 impl<T> AsMut<T> for Bound<T> {
+    #[inline]
     fn as_mut(&mut self) -> &mut T {
         match self {
             &mut Bound::Included(ref mut bound) => bound,
