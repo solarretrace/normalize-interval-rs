@@ -593,18 +593,33 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(3, 20));
     /// ```
+    ///
+    /// Not that if the amount is wider than the interval, it will become empty:
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.left_crop(30);
+    ///
+    /// assert!(int.is_empty());
+    /// ```
     #[inline]
     pub fn left_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
-        let temp = self.clone();
-        mem::replace(self, Interval::new(
-            match temp.start {
-                Bound::Included(t) => Bound::Included(t + amount),
-                Bound::Excluded(t) => Bound::Excluded(t + amount),
-            },
-            Some(temp.end))
-        );
+        let new_start = self.start.as_ref().clone() + amount;
+        let end = self.end.as_ref().clone();
+        if &new_start < self.end.as_ref() {
+            mem::replace(self.start.as_mut(), new_start);
+        } else if &new_start == self.end.as_ref() {
+            let int = Interval::new(
+                Bound::apply(&self.start, end.clone()),
+                Some(Bound::apply(&self.end, end))
+            );
+            mem::replace(self, int);
+        } else {
+            mem::replace(self, Interval::open(end.clone(), end));
+        }
     }
 
     /// Shortens the interval by croping from the right by the given amount.
@@ -618,18 +633,33 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     ///
     /// assert_eq!(int, Interval::open(0, 17));
     /// ```
+    ///
+    /// Not that if the amount is wider than the interval, it will become empty:
+    ///
+    /// ```rust
+    /// use interval::Interval;
+    /// let mut int = Interval::open(0, 20);
+    /// int.right_crop(30);
+    ///
+    /// assert!(int.is_empty());
+    /// ```
     #[inline]
     pub fn right_crop(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
-        let temp = self.clone();
-        mem::replace(self, Interval::new(
-            temp.start,
-            Some(match temp.end {
-                Bound::Included(t) => Bound::Included(t - amount),
-                Bound::Excluded(t) => Bound::Excluded(t - amount),
-            }))
-        );
+        let new_end = self.end.as_ref().clone() - amount;
+        let start = self.start.as_ref().clone();
+        if &new_end > self.start.as_ref() {
+            mem::replace(self.end.as_mut(), new_end);
+        } else if &new_end == self.start.as_ref() {
+            let int = Interval::new(
+                Bound::apply(&self.end, start.clone()),
+                Some(Bound::apply(&self.start, start))
+            );
+            mem::replace(self, int);
+        } else {
+            mem::replace(self, Interval::open(start.clone(), start));
+        }
     }
 
     /// Lengthens the interval by extending the left by the given amount.
@@ -647,14 +677,8 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     pub fn left_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Sub<Output=T>,
     {
-        let temp = self.clone();
-        mem::replace(self, Interval::new(
-            match temp.start {
-                Bound::Included(t) => Bound::Included(t - amount),
-                Bound::Excluded(t) => Bound::Excluded(t - amount),
-            },
-            Some(temp.end))
-        );
+        let s = self.start.as_ref().clone() - amount;
+        mem::replace(self.start.as_mut(), s);
     }
 
     /// Lengthens the interval by extending the right by the given amount.
@@ -672,14 +696,8 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
     pub fn right_extend(&mut self, amount: T)
         where T: PartialOrd + PartialEq + Clone + Add<Output=T>,
     {
-        let temp = self.clone();
-        mem::replace(self, Interval::new(
-            temp.start,
-            Some(match temp.end {
-                Bound::Included(t) => Bound::Included(t + amount),
-                Bound::Excluded(t) => Bound::Excluded(t + amount),
-            }))
-        );
+        let e = self.end.as_ref().clone() + amount;
+        mem::replace(self.end.as_mut(), e);
     }
 }
 
