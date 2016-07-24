@@ -43,8 +43,8 @@ pub enum Bound<T> {
 }
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
-    /// Constructs a new `Bound` by copying the bound type of the given `from` 
-    /// bound.
+    /// Constructs a new `Bound` by applying the bound type of the given `from` 
+    /// bound to the given value.
     ///
     /// # Example
     ///
@@ -52,12 +52,12 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// use interval::Bound;
     ///
     /// let b1 = Bound::Excluded(35);
-    /// let b2 = Bound::copy(&b1, 13.56f32);
+    /// let b2 = Bound::apply(&b1, 13.56f32);
     ///
     /// assert_eq!(b2, Bound::Excluded(13.56f32));
     /// ```
     #[inline]
-    pub fn copy<O>(from: &Self, to: O) -> Bound<O> {
+    pub fn apply<O>(from: &Self, to: O) -> Bound<O> {
         match from {
             &Bound::Included(_) => Bound::Included(to),
             &Bound::Excluded(_) => Bound::Excluded(to),
