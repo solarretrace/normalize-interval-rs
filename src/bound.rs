@@ -43,6 +43,27 @@ pub enum Bound<T> {
 }
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
+    /// Constructs a new `Bound` by copying the bound type of the given `from` 
+    /// bound.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use interval::Bound;
+    ///
+    /// let b1 = Bound::Excluded(35);
+    /// let b2 = Bound::copy(&b1, 13.56f32);
+    ///
+    /// assert_eq!(b2, Bound::Excluded(13.56f32));
+    /// ```
+    #[inline]
+    pub fn copy<O>(from: &Self, to: O) -> Bound<O> {
+        match from {
+            &Bound::Included(_) => Bound::Included(to),
+            &Bound::Excluded(_) => Bound::Excluded(to),
+        }
+    }
+
     /// Returns whether the boundary includes its point.
     ///
     /// # Example
