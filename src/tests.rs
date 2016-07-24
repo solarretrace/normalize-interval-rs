@@ -13,6 +13,11 @@ fn interval_point_constructors() {
     assert_eq!(lo(0.5, 0.5), c(0.5, 0.5));
     assert_eq!(ro(0.5, 0.5), c(0.5, 0.5));
     assert_eq!(c(0.5, 0.5), c(0.5, 0.5));
+
+    // Point conversions:
+    assert_eq!(c(0.5, 0.5), 0.5f32.into());
+    assert_eq!(lo(0.5, 0.5), 0.5f32.into());
+    assert_eq!(ro(0.5, 0.5), 0.5f32.into());
 }
 
 /// Tests the Interval::intersect function.
