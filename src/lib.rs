@@ -289,6 +289,32 @@ impl<T> Interval<T> where T: PartialOrd + PartialEq + Clone  {
         self.left_bound() == self.right_bound() && self.left_bound().is_open()
     }
 
+    /// Returns whether the interval contains a single point.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interval::{Interval, Bound};
+    ///
+    /// let int_a = Interval::right_open(0, 2);
+    /// let int_b = Interval::right_open(2, 2);
+    /// assert!(!int_a.is_point());
+    /// assert!(int_b.is_point());
+    /// ```
+    ///
+    /// An open interval with two of the same points is not a point interval:
+    ///
+    /// ```rust
+    /// # use interval::{Interval, Bound};
+    /// let int = Interval::open(0, 0);
+    /// assert!(!int.is_point());
+    /// ```
+    #[inline]
+    pub fn is_point(&self) -> bool {
+        self.left_bound().as_ref() == self.right_bound().as_ref() 
+            && !self.is_empty()
+    }
+
     /// Converts the interval into an `Option`, returning `None` if it is empty.
     ///
     /// # Example
