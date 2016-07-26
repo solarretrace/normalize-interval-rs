@@ -738,7 +738,7 @@ impl<T> fmt::Display for Interval<T>
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_empty() {
             write!(f, "Ø")
-        } else if self.left_bound().as_ref() == self.right_bound().as_ref() {
+        } else if self.is_point() {
             write!(f, "{}", self.left_point())
         } else {
             write!(f, "{}{}, {}{}",

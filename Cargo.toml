@@ -1,6 +1,6 @@
 [package]
 name = "interval"
-version = "0.7.4"
+version = "0.7.5"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 keywords = ["color"]
 description = "Generic interval library"
