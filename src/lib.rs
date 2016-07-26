@@ -710,12 +710,20 @@ impl<T> fmt::Display for Interval<T>
     where T: fmt::Display + PartialOrd + Clone 
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}, {}{}",
-            if self.left_bound().is_open() {"("} else {"["},
-            self.left_point(), 
-            self.right_point(),
-            if self.left_bound().is_open() {")"} else {"]"},
-        )
+        if self.left_bound().as_ref() == self.right_bound().as_ref() {
+            write!(f, "{}{}{}",
+                if self.left_bound().is_open() {"("} else {"["},
+                self.left_point(),
+                if self.right_bound().is_open() {")"} else {"]"},
+            )
+        } else {
+            write!(f, "{}{}, {}{}",
+                if self.left_bound().is_open() {"("} else {"["},
+                self.left_point(), 
+                self.right_point(),
+                if self.right_bound().is_open() {")"} else {"]"},
+            )
+        }
     }
 }
 
