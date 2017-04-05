@@ -26,9 +26,10 @@
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
-// Module imports.
+// Local imports.
 use bound::*;
 
+// Standard imports.
 use std::cmp::Ordering;
 use std::fmt;
 use std::convert::From;

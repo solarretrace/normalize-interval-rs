@@ -28,7 +28,6 @@
 
 // Module imports.
 use std::default::Default;
-use std::fmt::Debug;
 
 // Local enum shortcuts.
 use Bound::*;
@@ -36,8 +35,7 @@ use Bound::*;
 ////////////////////////////////////////////////////////////////////////////////
 // Bound<T>
 ////////////////////////////////////////////////////////////////////////////////
-/// Determines the type of an interval's boundary. `AsRef` and `AsMut` 
-/// implementations are provided to access the point at the boundary.
+/// Determines the type of an interval's boundary.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Bound<T> {
     /// The boundary includes the point.

@@ -22,23 +22,34 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //!
-//! Provides a basic bounded interval type for doing complex set selections.
+//! Provides a managed collection of intervals.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-#[warn(missing_docs)]
-mod bound;
-#[warn(missing_docs)]
-mod interval;
-#[warn(missing_docs)]
-mod selection;
-#[warn(missing_docs)]
-mod parse;
+
+// Local imports.
+use interval::Interval;
+
+////////////////////////////////////////////////////////////////////////////////
+// Selection
+////////////////////////////////////////////////////////////////////////////////
+/// A possibly non-contiguous selection of intervals.
+#[derive(Debug, PartialEq, Clone)]
+pub struct Selection<T> where T: PartialOrd + Ord + Clone {
+	intervals: Vec<Interval<T>>
+}
 
 
+impl<T> Selection<T> where T: PartialOrd + Ord + Clone {
+	pub fn empty() -> Self {
+		Selection {
+			intervals: Vec::new(),
+		}
+	}
+	pub fn new(intervals: Vec<Interval<T>>) -> Self {
+		Selection {
+			intervals: intervals,
+		}
+	}
+}
 
 
-// Re-exports.
-pub use bound::{Bound, BoundOps};
-pub use interval::*;
-pub use selection::*;
-pub use parse::*;
