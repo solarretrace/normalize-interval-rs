@@ -36,42 +36,14 @@ use std::convert::From;
 
 // Local enum shortcuts.
 use Bound::*;
-use Interval::*;
-
+use self::IntervalState::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 /// A contiguous interval of the type T.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Interval<T> {
-    /// An interval containing no points.
-    Empty,
-    /// An interval containing only the given point.
-    Point(T),
-    /// An interval containing all points between two given points, exclude
-    /// them both.
-    Open(T, T),
-    /// An interval containing all points between two given points, include
-    /// the greater of the two.
-    LeftOpen(T, T),
-    /// An interval containing all points between two given points, include
-    /// the lesser of the two.
-    RightOpen(T, T),
-    /// An interval containing all points between two given points, include
-    /// them both.
-    Closed(T, T),
-    /// An interval containing all points less than the given point.
-    UpTo(T),
-    /// An interval containing all points greater than the given point.
-    UpFrom(T),
-    /// An interval containing the given point and all points less than it.
-    To(T),
-    /// An interval containing the given point and all points greater than it.
-    From(T),
-    /// An interval containing all points.
-    Full,
-}
+pub struct Interval<T>(IntervalState<T>);
 
 impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// Constructs a new interval from the given bounds. If the right bound
@@ -103,33 +75,17 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(int.is_empty());
     /// ```
     pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
-        match (left, right) {
-            (Some(lb), Some(rb)) => match (lb, rb) {
-                (Exclude(l), Exclude(r)) => Interval::open(l, r),
-                (Exclude(l), Include(r)) => Interval::left_open(l, r),
-                (Include(l), Exclude(r)) => Interval::right_open(l, r),
-                (Include(l), Include(r)) => Interval::closed(l, r),
-            },
-            (None, Some(rb)) => match rb {
-                Exclude(r) => UpTo(r),
-                Include(r) => To(r),
-            },
-            (Some(lb), None) => match lb {
-                Exclude(l) => UpFrom(l),
-                Include(l) => From(l),
-            },
-            (None, None) => Full,
-        }
+        Interval(IntervalState::new(left, right))
     }
     
     /// Returns an empty interval.
     pub fn empty() -> Self {
-        Empty
+        Interval(Empty)
     }
     
     /// Constructs a new point interval for the given point.
     pub fn point(point: T) -> Self {
-        Interval::Point(point)
+        Interval(IntervalState::Point(point))
     }
     
     /// Constructs a new open interval from the given points. If the right
@@ -148,10 +104,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
     /// ```
     pub fn open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less => Open(left, right),
-            _              => Empty,
-        }
+        Interval(IntervalState::open(left, right))
     }
     
     /// Constructs a new left-open interval from the given points. If the
@@ -171,11 +124,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
     /// ```
     pub fn left_open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => LeftOpen(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
+        Interval(IntervalState::left_open(left, right))
     }
     
     /// Constructs a new right-open interval from the given points. If the
@@ -195,11 +144,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
     /// ```
     pub fn right_open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => RightOpen(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
+        Interval(IntervalState::right_open(left, right))
     }
     
     /// Constructs a new closed interval from the given points. If the
@@ -219,11 +164,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
     /// ```
     pub fn closed(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => Closed(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
+        Interval(IntervalState::closed(left, right))
     }
     
     /// Returns whether the interval excludes any of its boundary points.
@@ -240,7 +181,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(b.is_open());
     /// ```
     pub fn is_open(&self) -> bool {
-        match *self {
+        match self.0 {
             Point(_)     => false,
             Closed(_, _) => false,
             _            => true,
@@ -261,7 +202,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(b.is_half_open());
     /// ```
     pub fn is_half_open(&self) -> bool {
-        match *self {
+        match self.0 {
             LeftOpen(_, _)  => true,
             RightOpen(_, _) => true,
             To(_)           => true,
@@ -284,7 +225,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(!b.is_closed());
     /// ```
     pub fn is_closed(&self) -> bool {
-        match *self {
+        match self.0 {
             Empty        => true,
             Point(_)     => true,
             Closed(_, _) => true,
@@ -307,7 +248,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(b.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        match *self {
+        match self.0 {
             Empty => true,
             _     => false,
         }
@@ -328,7 +269,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(!b.is_degenerate());
     /// ```
     pub fn is_degenerate(&self) -> bool {
-        match *self {
+        match self.0 {
             Point(_) => true,
             _        => false,
         }
@@ -348,7 +289,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(!b.is_full());
     /// ```
     pub fn is_full(&self) -> bool {
-        match *self {
+        match self.0 {
             Full => true,
             _    => false,
         }
@@ -368,7 +309,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(b.is_bounded());
     /// ```
     pub fn is_bounded(&self) -> bool {
-        match *self {
+        match self.0 {
             UpTo(_)   => false,
             UpFrom(_) => false,
             To(_)     => false,
@@ -390,19 +331,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
     /// ```
     pub fn lower_bound(&self) -> Option<Bound<T>> {
-        match *self {
-            Empty               => None,
-            Point(ref p)        => Some(Include(p.clone())),
-            Open(ref l, _)      => Some(Exclude(l.clone())),
-            LeftOpen(ref l, _)  => Some(Exclude(l.clone())),
-            RightOpen(ref l, _) => Some(Include(l.clone())),
-            Closed(ref l, _)    => Some(Include(l.clone())),
-            UpTo(_)             => None,
-            UpFrom(ref p)       => Some(Exclude(p.clone())),
-            To(_)               => None,
-            From(ref p)         => Some(Include(p.clone())),
-            Full                => None,
-        }
+        self.0.lower_bound()
     }
     
     /// Returns the upper bound of the interval.
@@ -417,19 +346,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
     /// ```
     pub fn upper_bound(&self) -> Option<Bound<T>> {
-        match *self {
-            Empty               => None,
-            Point(ref p)        => Some(Include(p.clone())),
-            Open(_, ref r)      => Some(Exclude(r.clone())),
-            LeftOpen(_, ref r)  => Some(Include(r.clone())),
-            RightOpen(_, ref r) => Some(Exclude(r.clone())),
-            Closed(_, ref r)    => Some(Include(r.clone())),
-            UpTo(ref p)         => Some(Exclude(p.clone())),
-            UpFrom(_)           => None,
-            To(ref p)           => Some(Include(p.clone())),
-            From(_)             => None,
-            Full                => None,
-        }
+        self.0.upper_bound()
     }
     
     /// Returns the greatest lower bound of the interval.
@@ -444,7 +361,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.infimum(), Some(0));
     /// ```
     pub fn infimum(&self) -> Option<T> {
-        self.lower_bound().map(|b| b.as_ref().clone())
+        self.0.infimum()
     }
     
     /// Returns the least upper bound of the interval.
@@ -459,7 +376,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(int.supremum(), Some(2));
     /// ```
     pub fn supremum(&self) -> Option<T> {
-        self.upper_bound().map(|b| b.as_ref().clone())
+        self.0.supremum()
     }
     
     /// Returns whether the interval contains the given point.
@@ -477,19 +394,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert!(!int.contains(&3));
     /// ```
     pub fn contains(&self, point: &T) -> bool {
-        match *self {
-            Empty                   => false,
-            Point(ref p)            => point == p,
-            Open(ref l, ref r)      => point > l && point < r,
-            LeftOpen(ref l, ref r)  => point > l && point <= r,
-            RightOpen(ref l, ref r) => point >= l && point < r,
-            Closed(ref l, ref r)    => point >= l && point <= r,
-            UpTo(ref p)             => point < p,
-            UpFrom(ref p)           => point > p,
-            To(ref p)               => point <= p,
-            From(ref p)             => point >= p,
-            Full                    => true,
-        }
+        self.0.contains(point)
     }
     
     /// Returns the smallest interval that contains all of the points contained
@@ -506,9 +411,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(a.enclose(&b), Interval::closed(0, 3));
     /// ```
     pub fn enclose(&self, other: &Self) -> Self {
-        Interval::new(
-            self.lower_bound().least_union(&other.lower_bound()), 
-            self.upper_bound().greatest_union(&other.upper_bound()))
+        Interval(self.0.enclose(&other.0))
     }
     
     /// Returns the largest interval whose points are all contained
@@ -525,9 +428,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(a.intersect(&b), Interval::right_open(1, 2));
     /// ```
     pub fn intersect(&self, other: &Self) -> Self {
-        Interval::new(
-            self.lower_bound().greatest_intersect(&other.lower_bound()), 
-            self.upper_bound().least_intersect(&other.upper_bound()))
+        Interval(self.0.intersect(&other.0))
     }
     
     /// Returns a `Vec` of `Interval`s containing all of the points contained
@@ -555,11 +456,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// assert_eq!(a.union(&b), vec![a, b]);
     /// ```
     pub fn union(&self, other: &Self) -> Vec<Self> {
-        if !self.intersect(other).is_empty() {
-            vec![self.enclose(other)]
-        } else {
-            vec![self.clone(), other.clone()]
-        }
+        self.0.union(&other.0).into_iter().map(Interval).collect()
     }
     
     /// Returns a `Vec` of `Interval`s containing all of the points contained
@@ -590,10 +487,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// ]);
     /// ```
     pub fn minus(&self, other: &Self) -> Vec<Self> {
-        other.complement()
-            .into_iter()
-            .filter_map(|i| self.intersect(&i).into_non_empty())
-            .collect()
+        self.0.minus(&other.0).into_iter().map(Interval).collect()
     }
     
     /// Returns a `Vec` of `Interval`s containing all of the points not in the
@@ -612,19 +506,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// ]);
     /// ```
     pub fn complement(&self) -> Vec<Self> {
-        match *self {
-            Empty                   => vec![Full],
-            Point(ref p)            => vec![UpTo(p.clone()), UpFrom(p.clone())],
-            Open(ref l, ref r)      => vec![To(l.clone()), From(r.clone())],
-            LeftOpen(ref l, ref r)  => vec![To(l.clone()), From(r.clone())],
-            RightOpen(ref l, ref r) => vec![UpTo(l.clone()), From(r.clone())],
-            Closed(ref l, ref r)    => vec![UpTo(l.clone()), UpFrom(r.clone())],
-            UpTo(ref p)             => vec![From(p.clone())],
-            UpFrom(ref p)           => vec![To(p.clone())],
-            To(ref p)               => vec![UpFrom(p.clone())],
-            From(ref p)             => vec![UpTo(p.clone())],
-            Full                    => vec![], // Or vec![Empty]?
-        }
+        self.0.complement().into_iter().map(Interval).collect()
     }
 
     /// Returns the smallest closed interval containing all of the points in 
@@ -639,27 +521,17 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     /// 
     /// assert_eq!(int.closure(), Interval::closed(0, 2));
     /// ```
-    ///
-    /// 
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::right_open(0, 2);
-    /// 
-    /// assert_eq!(int.closure(), Interval::closed(0, 2));
-    /// ```
     pub fn closure(&self) -> Self {
-        match self {
-            &Open(ref l, ref r)      => Closed(l.clone(), r.clone()),
-            &LeftOpen(ref l, ref r)  => Closed(l.clone(), r.clone()),
-            &RightOpen(ref l, ref r) => Closed(l.clone(), r.clone()),
-            &UpTo(_)                 => Full,
-            &UpFrom(_)               => Full,
-            &To(_)                   => Full,
-            &From(_)                 => Full,
-            _                        => self.clone(),
-        }
+        Interval(match self.0 {
+            Open(ref l, ref r)      => Closed(l.clone(), r.clone()),
+            LeftOpen(ref l, ref r)  => Closed(l.clone(), r.clone()),
+            RightOpen(ref l, ref r) => Closed(l.clone(), r.clone()),
+            UpTo(_)                 => Full,
+            UpFrom(_)               => Full,
+            To(_)                   => Full,
+            From(_)                 => Full,
+            _                        => self.0.clone(),
+        })
     }
 
     /// Returns the partitions the interval formed by the given point.
@@ -683,7 +555,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
                 Interval::new(
                     self.lower_bound(),
                     Some(Exclude(point.clone()))),
-                Point(point.clone()),
+                Interval::point(point.clone()),
                 Interval::new(
                     Some(Exclude(point.clone())),
                     self.upper_bound())
@@ -734,9 +606,9 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     pub fn intersect_all<I>(intervals: I) -> Self
         where I: IntoIterator<Item=Self>
     {
-        intervals
-            .into_iter()
-            .fold(Full, |acc, i| acc.intersect(&i))
+        Interval(
+            IntervalState::intersect_all(intervals.into_iter().map(|i| i.0))
+        )
     }
 
     /// Returns the union of all of the given intervals.
@@ -756,6 +628,252 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     ///
     /// assert_eq!(Interval::union_all(ints), vec![Interval::open(-1, 2)]);
     /// ```
+    pub fn union_all<I>(intervals: I) -> Vec<Self>
+        where I: IntoIterator<Item=Self>
+    {
+        IntervalState::union_all(intervals.into_iter().map(|i| i.0))
+            .into_iter()
+            .map(Interval)
+            .collect()
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// IntervalState<T>
+////////////////////////////////////////////////////////////////////////////////
+/// A contiguous interval of the type T. Used to implement the internal state of
+/// `Interval`.
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum IntervalState<T> {
+    /// An interval containing no points.
+    Empty,
+    /// An interval containing only the given point.
+    Point(T),
+    /// An interval containing all points between two given points, exclude
+    /// them both.
+    Open(T, T),
+    /// An interval containing all points between two given points, include
+    /// the greater of the two.
+    LeftOpen(T, T),
+    /// An interval containing all points between two given points, include
+    /// the lesser of the two.
+    RightOpen(T, T),
+    /// An interval containing all points between two given points, include
+    /// them both.
+    Closed(T, T),
+    /// An interval containing all points less than the given point.
+    UpTo(T),
+    /// An interval containing all points greater than the given point.
+    UpFrom(T),
+    /// An interval containing the given point and all points less than it.
+    To(T),
+    /// An interval containing the given point and all points greater than it.
+    From(T),
+    /// An interval containing all points.
+    Full,
+}
+
+impl<T> IntervalState<T> where T: PartialOrd + Ord + Clone {
+    /// Constructs a new interval from the given bounds. If the right bound
+    /// point is less than the left bound point, an empty interval will be 
+    /// returned.
+    pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
+        match (left, right) {
+            (Some(lb), Some(rb)) => match (lb, rb) {
+                (Exclude(l), Exclude(r)) => IntervalState::open(l, r),
+                (Exclude(l), Include(r)) => IntervalState::left_open(l, r),
+                (Include(l), Exclude(r)) => IntervalState::right_open(l, r),
+                (Include(l), Include(r)) => IntervalState::closed(l, r),
+            },
+            (None, Some(rb)) => match rb {
+                Exclude(r) => UpTo(r),
+                Include(r) => To(r),
+            },
+            (Some(lb), None) => match lb {
+                Exclude(l) => UpFrom(l),
+                Include(l) => From(l),
+            },
+            (None, None) => Full,
+        }
+    }
+    
+    /// Constructs a new open interval from the given points. If the right
+    /// point is less than the left point, an empty interval will be returned.
+    pub fn open(left: T, right: T) -> Self {
+        match T::cmp(&left, &right) {
+            Ordering::Less => Open(left, right),
+            _              => Empty,
+        }
+    }
+    
+    /// Constructs a new left-open interval from the given points. If the
+    /// right bound point is less than the left bound point, an empty interval
+    /// will be returned.
+    pub fn left_open(left: T, right: T) -> Self {
+        match T::cmp(&left, &right) {
+            Ordering::Less    => LeftOpen(left, right),
+            Ordering::Equal   => Point(left),
+            Ordering::Greater => Empty,
+        }
+    }
+    
+    /// Constructs a new right-open interval from the given points. If the
+    /// right bound point is less than the left bound point, an empty interval
+    /// will be returned.
+    pub fn right_open(left: T, right: T) -> Self {
+        match T::cmp(&left, &right) {
+            Ordering::Less    => RightOpen(left, right),
+            Ordering::Equal   => Point(left),
+            Ordering::Greater => Empty,
+        }
+    }
+    
+    /// Constructs a new closed interval from the given points. If the
+    /// right bound point is less than the left bound point, an empty interval
+    /// will be returned.
+    pub fn closed(left: T, right: T) -> Self {
+        match T::cmp(&left, &right) {
+            Ordering::Less    => Closed(left, right),
+            Ordering::Equal   => Point(left),
+            Ordering::Greater => Empty,
+        }
+    }
+
+    /// Returns whether the interval is empty (i.e., contains no points.)
+    pub fn is_empty(&self) -> bool {
+        match *self {
+            Empty => true,
+            _     => false,
+        }
+    }
+
+    /// Returns the lower bound of the interval.
+    pub fn lower_bound(&self) -> Option<Bound<T>> {
+        match *self {
+            Empty               => None,
+            Point(ref p)        => Some(Include(p.clone())),
+            Open(ref l, _)      => Some(Exclude(l.clone())),
+            LeftOpen(ref l, _)  => Some(Exclude(l.clone())),
+            RightOpen(ref l, _) => Some(Include(l.clone())),
+            Closed(ref l, _)    => Some(Include(l.clone())),
+            UpTo(_)             => None,
+            UpFrom(ref p)       => Some(Exclude(p.clone())),
+            To(_)               => None,
+            From(ref p)         => Some(Include(p.clone())),
+            Full                => None,
+        }
+    }
+    
+    /// Returns the upper bound of the interval.
+    pub fn upper_bound(&self) -> Option<Bound<T>> {
+        match *self {
+            Empty               => None,
+            Point(ref p)        => Some(Include(p.clone())),
+            Open(_, ref r)      => Some(Exclude(r.clone())),
+            LeftOpen(_, ref r)  => Some(Include(r.clone())),
+            RightOpen(_, ref r) => Some(Exclude(r.clone())),
+            Closed(_, ref r)    => Some(Include(r.clone())),
+            UpTo(ref p)         => Some(Exclude(p.clone())),
+            UpFrom(_)           => None,
+            To(ref p)           => Some(Include(p.clone())),
+            From(_)             => None,
+            Full                => None,
+        }
+    }
+    
+    /// Returns the greatest lower bound of the interval.
+    pub fn infimum(&self) -> Option<T> {
+        self.lower_bound().map(|b| b.as_ref().clone())
+    }
+    
+    /// Returns the least upper bound of the interval.
+    pub fn supremum(&self) -> Option<T> {
+        self.upper_bound().map(|b| b.as_ref().clone())
+    }
+    
+    /// Returns whether the interval contains the given point.
+    pub fn contains(&self, point: &T) -> bool {
+        match *self {
+            Empty                   => false,
+            Point(ref p)            => point == p,
+            Open(ref l, ref r)      => point > l && point < r,
+            LeftOpen(ref l, ref r)  => point > l && point <= r,
+            RightOpen(ref l, ref r) => point >= l && point < r,
+            Closed(ref l, ref r)    => point >= l && point <= r,
+            UpTo(ref p)             => point < p,
+            UpFrom(ref p)           => point > p,
+            To(ref p)               => point <= p,
+            From(ref p)             => point >= p,
+            Full                    => true,
+        }
+    }
+    
+    /// Returns the smallest interval that contains all of the points contained
+    /// within this interval and the given interval.
+    pub fn enclose(&self, other: &Self) -> Self {
+        IntervalState::new(
+            self.lower_bound().least_union(&other.lower_bound()), 
+            self.upper_bound().greatest_union(&other.upper_bound()))
+    }
+    
+    /// Returns the largest interval whose points are all contained
+    /// entirely within this interval and the given interval.
+    pub fn intersect(&self, other: &Self) -> Self {
+        IntervalState::new(
+            self.lower_bound().greatest_intersect(&other.lower_bound()), 
+            self.upper_bound().least_intersect(&other.upper_bound()))
+    }
+    
+    /// Returns a `Vec` of `IntervalState`s containing all of the points contained
+    /// within this interval and the given interval.
+    pub fn union(&self, other: &Self) -> Vec<Self> {
+        if !self.intersect(other).is_empty() {
+            vec![self.enclose(other)]
+        } else {
+            vec![self.clone(), other.clone()]
+        }
+    }
+    
+    /// Returns a `Vec` of `IntervalState`s containing all of the points contained
+    /// within this interval that are not in the given interval.
+    pub fn minus(&self, other: &Self) -> Vec<Self> {
+        other.complement()
+            .into_iter()
+            .map(|i| self.intersect(&i))
+            .filter(|i| !i.is_empty())
+            .collect()
+    }
+    
+    /// Returns a `Vec` of `IntervalState`s containing all of the points not in the
+    /// interval.
+    pub fn complement(&self) -> Vec<Self> {
+        match *self {
+            Empty                   => vec![Full],
+            Point(ref p)            => vec![UpTo(p.clone()), UpFrom(p.clone())],
+            Open(ref l, ref r)      => vec![To(l.clone()), From(r.clone())],
+            LeftOpen(ref l, ref r)  => vec![To(l.clone()), From(r.clone())],
+            RightOpen(ref l, ref r) => vec![UpTo(l.clone()), From(r.clone())],
+            Closed(ref l, ref r)    => vec![UpTo(l.clone()), UpFrom(r.clone())],
+            UpTo(ref p)             => vec![From(p.clone())],
+            UpFrom(ref p)           => vec![To(p.clone())],
+            To(ref p)               => vec![UpFrom(p.clone())],
+            From(ref p)             => vec![UpTo(p.clone())],
+            Full                    => vec![], // Or vec![Empty]?
+        }
+    }
+
+
+    /// Returns the intersection of all of the given intervals.
+    pub fn intersect_all<I>(intervals: I) -> Self
+        where I: IntoIterator<Item=Self>
+    {
+        intervals
+            .into_iter()
+            .fold(Full, |acc, i| acc.intersect(&i))
+    }
+
+    /// Returns the union of all of the given intervals.
     pub fn union_all<I>(intervals: I) -> Vec<Self>
         where I: IntoIterator<Item=Self>
     {
@@ -787,12 +905,16 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Trait impls
+////////////////////////////////////////////////////////////////////////////////
+
 // Display using interval notation.
 impl<T> fmt::Display for Interval<T> 
     where T: fmt::Display + PartialOrd + Ord + Clone 
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self.0 {
             Empty                   => write!(f, "Ø"),
             Point(ref p)            => write!(f, "{}", p),
             Open(ref l, ref r)      => write!(f, "({}, {})", l, r),
@@ -808,10 +930,10 @@ impl<T> fmt::Display for Interval<T>
     }
 }
 
-// Interval-from-Point conversion.
+// IntervalState-from-Point conversion.
 impl<T> From<T> for Interval<T> where T: PartialOrd + Ord + Clone {
     #[inline]
     fn from(t: T) -> Self {
-        Interval::point(t)
+        Interval(Point(t))
     }
 }
