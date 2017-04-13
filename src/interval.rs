@@ -22,7 +22,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //!
-//! Provides an interval type for doing complex set selections.
+//! Provides an interval type for doing set selection and iteration.
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -30,910 +30,1380 @@
 use bound::*;
 
 // Standard imports.
+use std;
 use std::cmp::Ordering;
 use std::fmt;
 use std::convert::From;
 
 // Local enum shortcuts.
 use Bound::*;
-use self::IntervalState::*;
+use self::RawInterval::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 /// A contiguous interval of the type T.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Interval<T>(IntervalState<T>);
+#[derive(Debug, Clone, Copy)]
+pub struct Interval<T>(RawInterval<T>);
 
+// All mutable operations and constructors on `Interval` must ensure that the
+// interval is normalized before returning.
 impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
-    /// Constructs a new interval from the given bounds. If the right bound
-    /// point is less than the left bound point, an empty interval will be 
-    /// returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let l = Bound::Include(12);
-    /// let r = Bound::Include(16);
-    /// let int = Interval::new(Some(l), Some(r));
-    /// 
-    /// assert_eq!(int.infimum(), Some(12));
-    /// assert_eq!(int.supremum(), Some(16));
-    /// ```
-    ///
-    /// If the arguments are out of order, an empty interval will be returned:
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let l = Bound::Include(12);
-    /// let r = Bound::Include(16);
-    /// let int = Interval::new(Some(r), Some(l));
-    /// 
-    /// assert!(int.is_empty());
-    /// ```
-    pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
-        Interval(IntervalState::new(left, right))
-    }
-    
-    /// Returns an empty interval.
-    pub fn empty() -> Self {
-        Interval(Empty)
-    }
-    
-    /// Constructs a new point interval for the given point.
-    pub fn point(point: T) -> Self {
-        Interval(IntervalState::Point(point))
-    }
-    
-    /// Constructs a new open interval from the given points. If the right
-    /// point is less than the left point, an empty interval will be returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::open(0, 2);
-    /// 
-    /// assert_eq!(int.infimum(), Some(0));
-    /// assert_eq!(int.supremum(), Some(2));
-    /// assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
-    /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
-    /// ```
-    pub fn open(left: T, right: T) -> Self {
-        Interval(IntervalState::open(left, right))
-    }
-    
-    /// Constructs a new left-open interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::left_open(0, 2);
-    /// 
-    /// assert_eq!(int.infimum(), Some(0));
-    /// assert_eq!(int.supremum(), Some(2));
-    /// assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
-    /// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
-    /// ```
-    pub fn left_open(left: T, right: T) -> Self {
-        Interval(IntervalState::left_open(left, right))
-    }
-    
-    /// Constructs a new right-open interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::right_open(0, 2);
-    /// 
-    /// assert_eq!(int.infimum(), Some(0));
-    /// assert_eq!(int.supremum(), Some(2));
-    /// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
-    /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
-    /// ```
-    pub fn right_open(left: T, right: T) -> Self {
-        Interval(IntervalState::right_open(left, right))
-    }
-    
-    /// Constructs a new closed interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::closed(0, 2);
-    /// 
-    /// assert_eq!(int.infimum(), Some(0));
-    /// assert_eq!(int.supremum(), Some(2));
-    /// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
-    /// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
-    /// ```
-    pub fn closed(left: T, right: T) -> Self {
-        Interval(IntervalState::closed(left, right))
-    }
-    
-    /// Returns whether the interval excludes any of its boundary points.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::closed(0, 2);
-    /// let b = Interval::open(0, 2);
-    /// 
-    /// assert!(!a.is_open());
-    /// assert!(b.is_open());
-    /// ```
-    pub fn is_open(&self) -> bool {
-        match self.0 {
-            Point(_)     => false,
-            Closed(_, _) => false,
-            _            => true,
-        }
-    }
-    
-    /// Returns whether the interval includes only one of its boundary points.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::closed(0, 2);
-    /// let b = Interval::left_open(0, 2);
-    /// 
-    /// assert!(!a.is_half_open());
-    /// assert!(b.is_half_open());
-    /// ```
-    pub fn is_half_open(&self) -> bool {
-        match self.0 {
-            LeftOpen(_, _)  => true,
-            RightOpen(_, _) => true,
-            To(_)           => true,
-            From(_)         => true,
-            _               => false,
-        }
-    }
-    
-    /// Returns whether the interval includes all of its boundary points.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::closed(0, 2);
-    /// let b = Interval::open(0, 2);
-    /// 
-    /// assert!(a.is_closed());
-    /// assert!(!b.is_closed());
-    /// ```
-    pub fn is_closed(&self) -> bool {
-        match self.0 {
-            Empty        => true,
-            Point(_)     => true,
-            Closed(_, _) => true,
-            Full         => true,
-            _            => false,
-        }
-    }
-    
-    /// Returns whether the interval is empty (i.e., contains no points.)
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::closed(0, 2);
-    /// let b = Interval::open(0, 0);
-    /// 
-    /// assert!(!a.is_empty());
-    /// assert!(b.is_empty());
-    /// ```
-    pub fn is_empty(&self) -> bool {
-        match self.0 {
-            Empty => true,
-            _     => false,
-        }
-    }
-    
-    /// Returns whether the interval is degenerate (i.e., contains only a
-    /// single point.)
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::left_open(0, 0);
-    /// let b = Interval::open(0, 0);
-    /// 
-    /// assert!(a.is_degenerate());
-    /// assert!(!b.is_degenerate());
-    /// ```
-    pub fn is_degenerate(&self) -> bool {
-        match self.0 {
-            Point(_) => true,
-            _        => false,
-        }
-    }
-    
-    /// Returns whether the interval is full (i.e., contains all points.)
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::<u32>::new(None, None);
-    /// let b = Interval::open(-100, 100);
-    /// 
-    /// assert!(a.is_full());
-    /// assert!(!b.is_full());
-    /// ```
-    pub fn is_full(&self) -> bool {
-        match self.0 {
-            Full => true,
-            _    => false,
-        }
-    }
-    
-    /// Returns whether the interval is bounded on both sides.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let a = Interval::new(Some(Bound::Include(0)), None);
-    /// let b = Interval::open(0, 2);
-    /// 
-    /// assert!(!a.is_bounded());
-    /// assert!(b.is_bounded());
-    /// ```
-    pub fn is_bounded(&self) -> bool {
-        match self.0 {
-            UpTo(_)   => false,
-            UpFrom(_) => false,
-            To(_)     => false,
-            From(_)   => false,
-            Full      => false,
-            _         => true,
-        }
-    }
-    
-    /// Returns the lower bound of the interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::open(0, 2);
-    /// 
-    /// assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
-    /// ```
-    pub fn lower_bound(&self) -> Option<Bound<T>> {
-        self.0.lower_bound()
-    }
-    
-    /// Returns the upper bound of the interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::open(0, 2);
-    /// 
-    /// assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
-    /// ```
-    pub fn upper_bound(&self) -> Option<Bound<T>> {
-        self.0.upper_bound()
-    }
-    
-    /// Returns the greatest lower bound of the interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::open(0, 2);
-    /// 
-    /// assert_eq!(int.infimum(), Some(0));
-    /// ```
-    pub fn infimum(&self) -> Option<T> {
-        self.0.infimum()
-    }
-    
-    /// Returns the least upper bound of the interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::open(0, 2);
-    /// 
-    /// assert_eq!(int.supremum(), Some(2));
-    /// ```
-    pub fn supremum(&self) -> Option<T> {
-        self.0.supremum()
-    }
-    
-    /// Returns whether the interval contains the given point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::left_open(0, 2);
-    /// 
-    /// assert!(!int.contains(&0));
-    /// assert!(int.contains(&1));
-    /// assert!(int.contains(&2));
-    /// assert!(!int.contains(&3));
-    /// ```
-    pub fn contains(&self, point: &T) -> bool {
-        self.0.contains(point)
-    }
-    
-    /// Returns the smallest interval that contains all of the points contained
-    /// within this interval and the given interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::right_open(0, 2);
-    /// let b = Interval::closed(1, 3);
-    /// 
-    /// assert_eq!(a.enclose(&b), Interval::closed(0, 3));
-    /// ```
-    pub fn enclose(&self, other: &Self) -> Self {
-        Interval(self.0.enclose(&other.0))
-    }
-    
-    /// Returns the largest interval whose points are all contained
-    /// entirely within this interval and the given interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::right_open(0, 2);
-    /// let b = Interval::closed(1, 3);
-    /// 
-    /// assert_eq!(a.intersect(&b), Interval::right_open(1, 2));
-    /// ```
-    pub fn intersect(&self, other: &Self) -> Self {
-        Interval(self.0.intersect(&other.0))
-    }
-    
-    /// Returns a `Vec` of `Interval`s containing all of the points contained
-    /// within this interval and the given interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::right_open(0, 2);
-    /// let b = Interval::closed(1, 3);
-    /// 
-    /// assert_eq!(a.union(&b), vec![Interval::closed(0, 3)]);
-    /// ```
-    ///
-    /// Disjoint intervals will remain seperate:
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::right_open(0, 2);
-    /// let b = Interval::closed(3, 4);
-    /// 
-    /// assert_eq!(a.union(&b), vec![a, b]);
-    /// ```
-    pub fn union(&self, other: &Self) -> Vec<Self> {
-        self.0.union(&other.0).into_iter().map(Interval).collect()
-    }
-    
-    /// Returns a `Vec` of `Interval`s containing all of the points contained
-    /// within this interval that are not in the given interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::right_open(0, 2);
-    /// let b = Interval::closed(1, 3);
-    /// 
-    /// assert_eq!(a.minus(&b), vec![Interval::right_open(0, 1)]);
-    /// ```
-    ///
-    /// Disjoint intervals will remain seperate:
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let a = Interval::closed(0, 5);
-    /// let b = Interval::closed(1, 3);
-    /// 
-    /// assert_eq!(a.minus(&b), vec![
-    ///     Interval::right_open(0, 1),
-    ///     Interval::left_open(3, 5),
-    /// ]);
-    /// ```
-    pub fn minus(&self, other: &Self) -> Vec<Self> {
-        self.0.minus(&other.0).into_iter().map(Interval).collect()
-    }
-    
-    /// Returns a `Vec` of `Interval`s containing all of the points not in the
-    /// interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, Interval};
-    ///
-    /// let int = Interval::right_open(0, 2);
-    /// 
-    /// assert_eq!(int.complement(), vec![
-    ///     Interval::new(None, Some(Bound::Exclude(0))),
-    ///     Interval::new(Some(Bound::Include(2)), None),
-    /// ]);
-    /// ```
-    pub fn complement(&self) -> Vec<Self> {
-        self.0.complement().into_iter().map(Interval).collect()
-    }
+	/// Constructs a new interval from the given bounds. If the right bound
+	/// point is less than the left bound point, an empty interval will be 
+	/// returned.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let l = Bound::Include(12);
+	/// let r = Bound::Include(16);
+	/// let int = Interval::new(Some(l), Some(r));
+	/// 
+	/// assert_eq!(int.infimum(), Some(12));
+	/// assert_eq!(int.supremum(), Some(16));
+	/// ```
+	///
+	/// If the arguments are out of order, an empty interval will be returned:
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let l = Bound::Include(12);
+	/// let r = Bound::Include(16);
+	/// let int = Interval::new(Some(r), Some(l));
+	/// 
+	/// assert!(int.is_empty());
+	/// ```
+	pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
+		Interval::normalized(RawInterval::new(left, right))
+	}
 
-    /// Returns the smallest closed interval containing all of the points in 
-    /// this interval.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::right_open(0, 2);
-    /// 
-    /// assert_eq!(int.closure(), Interval::closed(0, 2));
-    /// ```
-    pub fn closure(&self) -> Self {
-        Interval(match self.0 {
-            Open(ref l, ref r)      => Closed(l.clone(), r.clone()),
-            LeftOpen(ref l, ref r)  => Closed(l.clone(), r.clone()),
-            RightOpen(ref l, ref r) => Closed(l.clone(), r.clone()),
-            UpTo(_)                 => Full,
-            UpFrom(_)               => Full,
-            To(_)                   => Full,
-            From(_)                 => Full,
-            _                        => self.0.clone(),
-        })
-    }
+	fn normalized(raw: RawInterval<T>) -> Self {
+		Interval(raw).normalized()
+	}
+	
+	/// Returns an empty interval.
+	pub fn empty() -> Self {
+		// Normalization not needed for empty intervals.
+		Interval(Empty)
+	}
+	
+	/// Constructs a new point interval for the given point.
+	pub fn point(point: T) -> Self {
+		// Normalization not needed for point intervals.
+		Interval(RawInterval::Point(point))
+	}
+	
+	/// Constructs a new open interval from the given points. If the right
+	/// point is less than the left point, an empty interval will be returned.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::open(0, 6);
+	/// 
+	/// assert_eq!(int.infimum(), Some(1));
+	/// assert_eq!(int.supremum(), Some(5));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(1)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(5)));
+	/// ```
+	pub fn open(left: T, right: T) -> Self {
+		Interval::normalized(RawInterval::open(left, right))
+	}
+	
+	/// Constructs a new left-open interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::left_open(0, 6);
+	/// 
+	/// assert_eq!(int.infimum(), Some(1));
+	/// assert_eq!(int.supremum(), Some(6));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(1)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(6)));
+	/// ```
+	pub fn left_open(left: T, right: T) -> Self {
+		Interval::normalized(RawInterval::left_open(left, right))
+	}
+	
+	/// Constructs a new right-open interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::right_open(0, 6);
+	/// 
+	/// assert_eq!(int.infimum(), Some(0));
+	/// assert_eq!(int.supremum(), Some(5));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(5)));
+	/// ```
+	pub fn right_open(left: T, right: T) -> Self {
+		Interval::normalized(RawInterval::right_open(left, right))
+	}
+	
+	/// Constructs a new closed interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::closed(0, 2);
+	/// 
+	/// assert_eq!(int.infimum(), Some(0));
+	/// assert_eq!(int.supremum(), Some(2));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
+	/// ```
+	pub fn closed(left: T, right: T) -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::closed(left, right))
+	}
+	
+	/// Returns whether the interval excludes any of its boundary points.
+	pub fn is_open(&self) -> bool {
+		match self.0 {
+			Point(_)	 => false,
+			Closed(_, _) => false,
+			_ 			 => true,
+		}
+	}
+	
+	/// Returns whether the interval includes only one of its boundary points.
+	pub fn is_half_open(&self) -> bool {
+		match self.0 {
+			LeftOpen(_, _)	=> true,
+			RightOpen(_, _)	=> true,
+			To(_)			=> true,
+			From(_)			=> true,
+			_				=> false,
+		}
+	}
+	
+	/// Returns whether the interval includes all of its boundary points.
+	pub fn is_closed(&self) -> bool {
+		match self.0 {
+			Empty		 => true,
+			Point(_)	 => true,
+			Closed(_, _) => true,
+			Full		 => true,
+			_			 => false,
+		}
+	}
+	
+	/// Returns whether the interval is empty (i.e., contains no points.)
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 6);
+	/// let b = Interval::open(0, 0);
+	/// 
+	/// assert!(!a.is_empty());
+	/// assert!(b.is_empty());
+	/// ```
+	pub fn is_empty(&self) -> bool {
+		match self.0 {
+			Empty => true,
+			_	  => false,
+		}
+	}
+	
+	/// Returns whether the interval is degenerate (i.e., contains only a
+	/// single point.)
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(1, 1);
+	/// let b = Interval::closed(0, 6);
+	/// 
+	/// assert!(a.is_degenerate());
+	/// assert!(!b.is_degenerate());
+	/// ```
+	pub fn is_degenerate(&self) -> bool {
+		match self.0 {
+			Point(_) => true,
+			_		 => false,
+		}
+	}
+	
+	/// Returns whether the interval is full (i.e., contains all points.)
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::<i32>::new(None, None);
+	/// let b = Interval::closed(-100, 100);
+	/// 
+	/// assert!(a.is_full());
+	/// assert!(!b.is_full());
+	/// ```
+	pub fn is_full(&self) -> bool {
+		match self.0 {
+			Full => true,
+			_	 => false,
+		}
+	}
+	
+	/// Returns whether the interval is bounded on both sides.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert!(int.is_bounded());
+	/// ```
+	pub fn is_bounded(&self) -> bool {
+		match self.0 {
+			UpTo(_)	  => false,
+			UpFrom(_) => false,
+			To(_)	  => false,
+			From(_)	  => false,
+			Full	  => false,
+			_		  => true,
+		}
+	}
+	
+	/// Returns the lower bound of the interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+	/// ```
+	pub fn lower_bound(&self) -> Option<Bound<T>> {
+		self.0.lower_bound()
+	}
+	
+	/// Returns the upper bound of the interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(6)));
+	/// ```
+	pub fn upper_bound(&self) -> Option<Bound<T>> {
+		self.0.upper_bound()
+	}
+	
+	/// Returns the greatest lower bound of the interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert_eq!(int.infimum(), Some(0));
+	/// ```
+	pub fn infimum(&self) -> Option<T> {
+		self.0.infimum()
+	}
+	
+	/// Returns the least upper bound of the interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert_eq!(int.supremum(), Some(6));
+	/// ```
+	pub fn supremum(&self) -> Option<T> {
+		self.0.supremum()
+	}
+	
+	/// Returns whether the interval contains the given point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let int = Interval::closed(1, 6);
+	/// 
+	/// assert!(!int.contains(&0));
+	/// assert!(int.contains(&1));
+	/// assert!(int.contains(&6));
+	/// assert!(!int.contains(&10));
+	/// ```
+	pub fn contains(&self, point: &T) -> bool {
+		self.0.contains(point)
+	}
+	
+	/// Returns the smallest interval that contains all of the points contained
+	/// within this interval and the given interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 4);
+	/// let b = Interval::closed(7, 9);
+	/// 
+	/// assert_eq!(a.enclose(&b), Interval::closed(0, 9));
+	/// ```
+	pub fn enclose(&self, other: &Self) -> Self {
+		Interval::normalized(self.0.enclose(&other.0))
+	}
+	
+	/// Returns the largest interval whose points are all contained
+	/// entirely within this interval and the given interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 4);
+	/// let b = Interval::closed(2, 9);
+	/// 
+	/// assert_eq!(a.intersect(&b), Interval::closed(2, 4));
+	/// ```
+	pub fn intersect(&self, other: &Self) -> Self {
+		Interval::normalized(self.0.intersect(&other.0))
+	}
+	
+	/// Returns a `Vec` of `Interval`s containing all of the points contained
+	/// within this interval and the given interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 4);
+	/// let b = Interval::closed(3, 7);
+	/// 
+	/// assert_eq!(a.union(&b), vec![Interval::closed(0, 7)]);
+	/// ```
+	///
+	/// Disjoint intervals will remain seperate:
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 4);
+	/// let b = Interval::closed(7, 9);
+	/// 
+	/// assert_eq!(a.union(&b), vec![a, b]);
+	/// ```
+	pub fn union(&self, other: &Self) -> Vec<Self> {
+		self.0
+			.union(&other.0)
+			.into_iter()
+			.map(Interval::normalized)
+			.collect()
+	}
+	
+	/// Returns a `Vec` of `Interval`s containing all of the points contained
+	/// within this interval that are not in the given interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 4);
+	/// let b = Interval::closed(2, 7);
+	/// 
+	/// assert_eq!(a.minus(&b), vec![Interval::closed(0, 1)]);
+	/// ```
+	///
+	/// Disjoint intervals will remain seperate:
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let a = Interval::closed(0, 5);
+	/// let b = Interval::closed(2, 3);
+	/// 
+	/// assert_eq!(a.minus(&b), vec![
+	///     Interval::closed(0, 1),
+	///     Interval::closed(4, 5),
+	/// ]);
+	/// ```
+	pub fn minus(&self, other: &Self) -> Vec<Self> {
+		self.0
+			.minus(&other.0)
+			.into_iter()
+			.map(Interval::normalized)
+			.collect()
+	}
+	
+	/// Returns a `Vec` of `Interval`s containing all of the points not in the
+	/// interval.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	///
+	/// let int = Interval::right_open(0, 2);
+	/// 
+	/// assert_eq!(int.complement(), vec![
+	///     Interval::new(None, Some(Bound::Exclude(0))),
+	///     Interval::new(Some(Bound::Include(2)), None),
+	/// ]);
+	/// ```
+	pub fn complement(&self) -> Vec<Self> {
+		self.0
+			.complement()
+			.into_iter()
+			.map(Interval::normalized)
+			.collect()
+	}
 
-    /// Returns the partitions the interval formed by the given point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let int = Interval::right_open(0, 2);
-    /// 
-    /// assert_eq!(int.partition_at(&1), Some((
-    ///     Interval::right_open(0, 1),
-    ///     Interval::point(1),
-    ///     Interval::open(1, 2)
-    /// )));
-    /// ```
-    pub fn partition_at(&self, point: &T) -> Option<(Self, Self, Self)> {
-        if self.contains(point) {
-            Some((
-                Interval::new(
-                    self.lower_bound(),
-                    Some(Exclude(point.clone()))),
-                Interval::point(point.clone()),
-                Interval::new(
-                    Some(Exclude(point.clone())),
-                    self.upper_bound())
-            ))
-        } else {
-            None
-        }
-    }
+	/// Returns the smallest closed interval containing all of the points in 
+	/// this interval.
+	pub fn closure(&self) -> Self {
+		Interval::normalized(match self.0 {
+			Open(ref l, ref r)		=> Closed(l.clone(), r.clone()),
+			LeftOpen(ref l, ref r)	=> Closed(l.clone(), r.clone()),
+			RightOpen(ref l, ref r)	=> Closed(l.clone(), r.clone()),
+			UpTo(ref r)				=> To(r.clone()),
+			UpFrom(ref l)			=> From(l.clone()),
+			To(_)					=> Full,
+			From(_)					=> Full,
+			_ 						=> self.0.clone(),
+		})
+	}
 
-    /// Converts the interval into an `Option`, returning `None` if it is empty.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// assert!(Interval::open(0, 0).into_non_empty().is_none());
-    ///
-    /// let int = Interval::open(0, 1);
-    /// assert_eq!(int.into_non_empty(), Some(int));
-    /// ```
-    pub fn into_non_empty(self) -> Option<Self> {
-        if self.is_empty() {
-            None
-        } else {
-            Some(self)
-        }
-    }
+	/// Returns the partitions the interval formed by the given point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let int = Interval::closed(0, 6);
+	/// 
+	/// assert_eq!(int.partition_at(&3), Some((
+	///     Interval::closed(0, 2),
+	///     Interval::point(3),
+	///     Interval::closed(4, 6)
+	/// )));
+	/// ```
+	pub fn partition_at(&self, point: &T) -> Option<(Self, Self, Self)> {
+		if self.contains(point) {
+			Some((
+				Interval::new(
+					self.lower_bound(),
+					Some(Exclude(point.clone()))),
+				Interval::point(point.clone()),
+				Interval::new(
+					Some(Exclude(point.clone())),
+					self.upper_bound())
+			))
+		} else {
+			None
+		}
+	}
+
+	/// Converts the interval into an `Option`, returning `None` if it is empty.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// assert!(Interval::open(0, 0).into_non_empty().is_none());
+	///
+	/// let int = Interval::open(0, 1);
+	/// assert_eq!(int.into_non_empty(), Some(int));
+	/// ```
+	pub fn into_non_empty(self) -> Option<Self> {
+		if self.is_empty() {
+			None
+		} else {
+			Some(self)
+		}
+	}
 
 
-    /// Returns the intersection of all of the given intervals.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let ints = vec![
-    ///     Interval::open(0, 2),
-    ///     Interval::open(-1, 1),
-    ///     Interval::open(0, 1),
-    ///     Interval::closed(0, 1),
-    ///     Interval::open(0, 1),
-    /// ];
-    ///
-    /// assert_eq!(Interval::intersect_all(ints), Interval::open(0, 1));
-    /// ```
-    pub fn intersect_all<I>(intervals: I) -> Self
-        where I: IntoIterator<Item=Self>
-    {
-        Interval(
-            IntervalState::intersect_all(intervals.into_iter().map(|i| i.0))
-        )
-    }
+	/// Returns the intersection of all of the given intervals.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let ints = vec![
+	///     Interval::closed(0, 2),
+	///     Interval::closed(-1, 1),
+	///     Interval::closed(0, 1),
+	///     Interval::closed(0, 1),
+	///     Interval::closed(0, 1),
+	/// ];
+	///
+	/// assert_eq!(Interval::intersect_all(ints), Interval::closed(0, 1));
+	/// ```
+	pub fn intersect_all<I>(intervals: I) -> Self
+		where I: IntoIterator<Item=Self>
+	{
+		Interval::normalized(
+			RawInterval::intersect_all(intervals.into_iter().map(|i| i.0))
+		)
+	}
 
-    /// Returns the union of all of the given intervals.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::Interval;
-    ///
-    /// let ints = vec![
-    ///     Interval::open(0, 2),
-    ///     Interval::open(-1, 1),
-    ///     Interval::open(0, 1),
-    ///     Interval::closed(0, 1),
-    ///     Interval::open(0, 1),
-    /// ];
-    ///
-    /// assert_eq!(Interval::union_all(ints), vec![Interval::open(-1, 2)]);
-    /// ```
-    pub fn union_all<I>(intervals: I) -> Vec<Self>
-        where I: IntoIterator<Item=Self>
-    {
-        IntervalState::union_all(intervals.into_iter().map(|i| i.0))
-            .into_iter()
-            .map(Interval)
-            .collect()
-    }
+	/// Returns the union of all of the given intervals.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let ints = vec![
+	///     Interval::closed(0, 2),
+	///     Interval::closed(-1, 1),
+	///     Interval::closed(0, 1),
+	///     Interval::closed(0, 1),
+	/// ];
+	///
+	/// assert_eq!(Interval::union_all(ints), vec![Interval::closed(-1, 2)]);
+	/// ```
+	pub fn union_all<I>(intervals: I) -> Vec<Self>
+		where I: IntoIterator<Item=Self>
+	{
+		RawInterval::union_all(intervals.into_iter().map(|i| i.0))
+			.into_iter()
+			.map(Interval::normalized)
+			.collect()
+	}
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// IntervalState<T>
+// RawInterval<T>
 ////////////////////////////////////////////////////////////////////////////////
 /// A contiguous interval of the type T. Used to implement the internal state of
 /// `Interval`.
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum IntervalState<T> {
-    /// An interval containing no points.
-    Empty,
-    /// An interval containing only the given point.
-    Point(T),
-    /// An interval containing all points between two given points, exclude
-    /// them both.
-    Open(T, T),
-    /// An interval containing all points between two given points, include
-    /// the greater of the two.
-    LeftOpen(T, T),
-    /// An interval containing all points between two given points, include
-    /// the lesser of the two.
-    RightOpen(T, T),
-    /// An interval containing all points between two given points, include
-    /// them both.
-    Closed(T, T),
-    /// An interval containing all points less than the given point.
-    UpTo(T),
-    /// An interval containing all points greater than the given point.
-    UpFrom(T),
-    /// An interval containing the given point and all points less than it.
-    To(T),
-    /// An interval containing the given point and all points greater than it.
-    From(T),
-    /// An interval containing all points.
-    Full,
+///
+/// This module provides the `Interval` and `RawInterval` types. `Interval` is
+/// a wrapper around `RawInterval` that enforces any normalization rules that
+/// may be applicable for intervals of the given type. For instance, all of
+/// the std integral types are finite so we can easily convert unbounded
+/// intervals to bounded intervals and open intervals to closed intervals,
+/// since we can guarantee that the same values will remain in the interval
+/// in either case. `Interval` does this conversion, while `RawInteral` 
+/// maintains seperate representations for bounded/unbounded and open/closed
+/// intervals.
+///
+/// For types that are not bounded or iterable, `Interval` operations are
+/// essentially equivalent to `RawInterval` operations, though they may expose
+/// different interfaces.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+enum RawInterval<T> {
+	/// An interval containing no points.
+	Empty,
+	/// An interval containing only the given point.
+	Point(T),
+	/// An interval containing all points between two given points, exclude
+	/// them both.
+	Open(T, T),
+	/// An interval containing all points between two given points, include
+	/// the greater of the two.
+	LeftOpen(T, T),
+	/// An interval containing all points between two given points, include
+	/// the lesser of the two.
+	RightOpen(T, T),
+	/// An interval containing all points between two given points, include
+	/// them both.
+	Closed(T, T),
+	/// An interval containing all points less than the given point.
+	UpTo(T),
+	/// An interval containing all points greater than the given point.
+	UpFrom(T),
+	/// An interval containing the given point and all points less than it.
+	To(T),
+	/// An interval containing the given point and all points greater than it.
+	From(T),
+	/// An interval containing all points.
+	Full,
 }
 
-impl<T> IntervalState<T> where T: PartialOrd + Ord + Clone {
-    /// Constructs a new interval from the given bounds. If the right bound
-    /// point is less than the left bound point, an empty interval will be 
-    /// returned.
-    pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
-        match (left, right) {
-            (Some(lb), Some(rb)) => match (lb, rb) {
-                (Exclude(l), Exclude(r)) => IntervalState::open(l, r),
-                (Exclude(l), Include(r)) => IntervalState::left_open(l, r),
-                (Include(l), Exclude(r)) => IntervalState::right_open(l, r),
-                (Include(l), Include(r)) => IntervalState::closed(l, r),
-            },
-            (None, Some(rb)) => match rb {
-                Exclude(r) => UpTo(r),
-                Include(r) => To(r),
-            },
-            (Some(lb), None) => match lb {
-                Exclude(l) => UpFrom(l),
-                Include(l) => From(l),
-            },
-            (None, None) => Full,
-        }
-    }
-    
-    /// Constructs a new open interval from the given points. If the right
-    /// point is less than the left point, an empty interval will be returned.
-    pub fn open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less => Open(left, right),
-            _              => Empty,
-        }
-    }
-    
-    /// Constructs a new left-open interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    pub fn left_open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => LeftOpen(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
-    }
-    
-    /// Constructs a new right-open interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    pub fn right_open(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => RightOpen(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
-    }
-    
-    /// Constructs a new closed interval from the given points. If the
-    /// right bound point is less than the left bound point, an empty interval
-    /// will be returned.
-    pub fn closed(left: T, right: T) -> Self {
-        match T::cmp(&left, &right) {
-            Ordering::Less    => Closed(left, right),
-            Ordering::Equal   => Point(left),
-            Ordering::Greater => Empty,
-        }
-    }
+impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
+	/// Constructs a new interval from the given bounds. If the right bound
+	/// point is less than the left bound point, an empty interval will be 
+	/// returned.
+	pub fn new(left: Option<Bound<T>>, right: Option<Bound<T>>) -> Self {
+		match (left, right) {
+			(Some(lb), Some(rb)) => match (lb, rb) {
+				(Exclude(l), Exclude(r)) => RawInterval::open(l, r),
+				(Exclude(l), Include(r)) => RawInterval::left_open(l, r),
+				(Include(l), Exclude(r)) => RawInterval::right_open(l, r),
+				(Include(l), Include(r)) => RawInterval::closed(l, r),
+			},
+			(None,	   Some(rb)) => match rb {
+				Exclude(r) => UpTo(r),
+				Include(r) => To(r),
+			},
+			(Some(lb), None)	 => match lb {
+				Exclude(l) => UpFrom(l),
+				Include(l) => From(l),
+			},
+			(None,	   None)	 => Full,
+		}
+	}
+	
+	/// Constructs a new open interval from the given points. If the right
+	/// point is less than the left point, an empty interval will be returned.
+	pub fn open(left: T, right: T) -> Self {
+		match T::cmp(&left, &right) {
+			Ordering::Less => Open(left, right),
+			_			   => Empty,
+		}
+	}
+	
+	/// Constructs a new left-open interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	pub fn left_open(left: T, right: T) -> Self {
+		match T::cmp(&left, &right) {
+			Ordering::Less	  => LeftOpen(left, right),
+			Ordering::Equal	  => Point(left),
+			Ordering::Greater => Empty,
+		}
+	}
+	
+	/// Constructs a new right-open interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	pub fn right_open(left: T, right: T) -> Self {
+		match T::cmp(&left, &right) {
+			Ordering::Less	  => RightOpen(left, right),
+			Ordering::Equal	  => Point(left),
+			Ordering::Greater => Empty,
+		}
+	}
+	
+	/// Constructs a new closed interval from the given points. If the
+	/// right bound point is less than the left bound point, an empty interval
+	/// will be returned.
+	pub fn closed(left: T, right: T) -> Self {
+		match T::cmp(&left, &right) {
+			Ordering::Less	  => Closed(left, right),
+			Ordering::Equal	  => Point(left),
+			Ordering::Greater => Empty,
+		}
+	}
 
-    /// Returns whether the interval is empty (i.e., contains no points.)
-    pub fn is_empty(&self) -> bool {
-        match *self {
-            Empty => true,
-            _     => false,
-        }
-    }
+	/// Returns whether the interval is empty (i.e., contains no points.)
+	pub fn is_empty(&self) -> bool {
+		match *self {
+			Empty => true,
+			_	  => false,
+		}
+	}
 
-    /// Returns the lower bound of the interval.
-    pub fn lower_bound(&self) -> Option<Bound<T>> {
-        match *self {
-            Empty               => None,
-            Point(ref p)        => Some(Include(p.clone())),
-            Open(ref l, _)      => Some(Exclude(l.clone())),
-            LeftOpen(ref l, _)  => Some(Exclude(l.clone())),
-            RightOpen(ref l, _) => Some(Include(l.clone())),
-            Closed(ref l, _)    => Some(Include(l.clone())),
-            UpTo(_)             => None,
-            UpFrom(ref p)       => Some(Exclude(p.clone())),
-            To(_)               => None,
-            From(ref p)         => Some(Include(p.clone())),
-            Full                => None,
-        }
-    }
-    
-    /// Returns the upper bound of the interval.
-    pub fn upper_bound(&self) -> Option<Bound<T>> {
-        match *self {
-            Empty               => None,
-            Point(ref p)        => Some(Include(p.clone())),
-            Open(_, ref r)      => Some(Exclude(r.clone())),
-            LeftOpen(_, ref r)  => Some(Include(r.clone())),
-            RightOpen(_, ref r) => Some(Exclude(r.clone())),
-            Closed(_, ref r)    => Some(Include(r.clone())),
-            UpTo(ref p)         => Some(Exclude(p.clone())),
-            UpFrom(_)           => None,
-            To(ref p)           => Some(Include(p.clone())),
-            From(_)             => None,
-            Full                => None,
-        }
-    }
-    
-    /// Returns the greatest lower bound of the interval.
-    pub fn infimum(&self) -> Option<T> {
-        self.lower_bound().map(|b| b.as_ref().clone())
-    }
-    
-    /// Returns the least upper bound of the interval.
-    pub fn supremum(&self) -> Option<T> {
-        self.upper_bound().map(|b| b.as_ref().clone())
-    }
-    
-    /// Returns whether the interval contains the given point.
-    pub fn contains(&self, point: &T) -> bool {
-        match *self {
-            Empty                   => false,
-            Point(ref p)            => point == p,
-            Open(ref l, ref r)      => point > l && point < r,
-            LeftOpen(ref l, ref r)  => point > l && point <= r,
-            RightOpen(ref l, ref r) => point >= l && point < r,
-            Closed(ref l, ref r)    => point >= l && point <= r,
-            UpTo(ref p)             => point < p,
-            UpFrom(ref p)           => point > p,
-            To(ref p)               => point <= p,
-            From(ref p)             => point >= p,
-            Full                    => true,
-        }
-    }
-    
-    /// Returns the smallest interval that contains all of the points contained
-    /// within this interval and the given interval.
-    pub fn enclose(&self, other: &Self) -> Self {
-        IntervalState::new(
-            self.lower_bound().least_union(&other.lower_bound()), 
-            self.upper_bound().greatest_union(&other.upper_bound()))
-    }
-    
-    /// Returns the largest interval whose points are all contained
-    /// entirely within this interval and the given interval.
-    pub fn intersect(&self, other: &Self) -> Self {
-        IntervalState::new(
-            self.lower_bound().greatest_intersect(&other.lower_bound()), 
-            self.upper_bound().least_intersect(&other.upper_bound()))
-    }
-    
-    /// Returns a `Vec` of `IntervalState`s containing all of the points contained
-    /// within this interval and the given interval.
-    pub fn union(&self, other: &Self) -> Vec<Self> {
-        if !self.intersect(other).is_empty() {
-            vec![self.enclose(other)]
-        } else {
-            vec![self.clone(), other.clone()]
-        }
-    }
-    
-    /// Returns a `Vec` of `IntervalState`s containing all of the points contained
-    /// within this interval that are not in the given interval.
-    pub fn minus(&self, other: &Self) -> Vec<Self> {
-        other.complement()
-            .into_iter()
-            .map(|i| self.intersect(&i))
-            .filter(|i| !i.is_empty())
-            .collect()
-    }
-    
-    /// Returns a `Vec` of `IntervalState`s containing all of the points not in the
-    /// interval.
-    pub fn complement(&self) -> Vec<Self> {
-        match *self {
-            Empty                   => vec![Full],
-            Point(ref p)            => vec![UpTo(p.clone()), UpFrom(p.clone())],
-            Open(ref l, ref r)      => vec![To(l.clone()), From(r.clone())],
-            LeftOpen(ref l, ref r)  => vec![To(l.clone()), From(r.clone())],
-            RightOpen(ref l, ref r) => vec![UpTo(l.clone()), From(r.clone())],
-            Closed(ref l, ref r)    => vec![UpTo(l.clone()), UpFrom(r.clone())],
-            UpTo(ref p)             => vec![From(p.clone())],
-            UpFrom(ref p)           => vec![To(p.clone())],
-            To(ref p)               => vec![UpFrom(p.clone())],
-            From(ref p)             => vec![UpTo(p.clone())],
-            Full                    => vec![], // Or vec![Empty]?
-        }
-    }
+	/// Returns the lower bound of the interval.
+	pub fn lower_bound(&self) -> Option<Bound<T>> {
+		match *self {
+			Empty				=> None,
+			Point(ref p)		=> Some(Include(p.clone())),
+			Open(ref l, _)		=> Some(Exclude(l.clone())),
+			LeftOpen(ref l, _)	=> Some(Exclude(l.clone())),
+			RightOpen(ref l, _)	=> Some(Include(l.clone())),
+			Closed(ref l, _)	=> Some(Include(l.clone())),
+			UpTo(_)				=> None,
+			UpFrom(ref p)		=> Some(Exclude(p.clone())),
+			To(_)				=> None,
+			From(ref p)			=> Some(Include(p.clone())),
+			Full				=> None,
+		}
+	}
+	
+	/// Returns the upper bound of the interval.
+	pub fn upper_bound(&self) -> Option<Bound<T>> {
+		match *self {
+			Empty				=> None,
+			Point(ref p)		=> Some(Include(p.clone())),
+			Open(_, ref r)		=> Some(Exclude(r.clone())),
+			LeftOpen(_, ref r)	=> Some(Include(r.clone())),
+			RightOpen(_, ref r)	=> Some(Exclude(r.clone())),
+			Closed(_, ref r)	=> Some(Include(r.clone())),
+			UpTo(ref p)			=> Some(Exclude(p.clone())),
+			UpFrom(_)			=> None,
+			To(ref p)			=> Some(Include(p.clone())),
+			From(_)				=> None,
+			Full				=> None,
+		}
+	}
+	
+	/// Returns the greatest lower bound of the interval.
+	pub fn infimum(&self) -> Option<T> {
+		self.lower_bound().map(|b| b.as_ref().clone())
+	}
+	
+	/// Returns the least upper bound of the interval.
+	pub fn supremum(&self) -> Option<T> {
+		self.upper_bound().map(|b| b.as_ref().clone())
+	}
+	
+	/// Returns whether the interval contains the given point.
+	pub fn contains(&self, point: &T) -> bool {
+		match *self {
+			Empty					=> false,
+			Point(ref p)			=> point == p,
+			Open(ref l, ref r)		=> point > l && point < r,
+			LeftOpen(ref l, ref r)	=> point > l && point <= r,
+			RightOpen(ref l, ref r)	=> point >= l && point < r,
+			Closed(ref l, ref r)	=> point >= l && point <= r,
+			UpTo(ref p)				=> point < p,
+			UpFrom(ref p)			=> point > p,
+			To(ref p)				=> point <= p,
+			From(ref p)				=> point >= p,
+			Full					=> true,
+		}
+	}
+	
+	/// Returns the smallest interval that contains all of the points contained
+	/// within this interval and the given interval.
+	pub fn enclose(&self, other: &Self) -> Self {
+		RawInterval::new(
+			self.lower_bound().least_union(&other.lower_bound()), 
+			self.upper_bound().greatest_union(&other.upper_bound()))
+	}
+	
+	/// Returns the largest interval whose points are all contained
+	/// entirely within this interval and the given interval.
+	pub fn intersect(&self, other: &Self) -> Self {
+		RawInterval::new(
+			self.lower_bound().greatest_intersect(&other.lower_bound()), 
+			self.upper_bound().least_intersect(&other.upper_bound()))
+	}
+	
+	/// Returns a `Vec` of `RawInterval`s containing all of the points 
+	/// contained within this interval and the given interval., vec![a, b]);
+	/// ```
+	pub fn union(&self, other: &Self) -> Vec<Self> {
+		if !self.intersect(other).is_empty() {
+			vec![self.enclose(other)]
+		} else {
+			vec![self.clone(), other.clone()]
+		}
+	}
+	
+	/// Returns a `Vec` of `RawInterval`s containing all of the points
+	/// contained within this interval that are not in the given interval.
+	pub fn minus(&self, other: &Self) -> Vec<Self> {
+		other.complement()
+			.into_iter()
+			.map(|i| self.intersect(&i))
+			.filter(|i| !i.is_empty())
+			.collect()
+	}
+	
+	/// Returns a `Vec` of `RawInterval`s containing all of the points not in
+	/// the interval.
+	pub fn complement(&self) -> Vec<Self> {
+		match *self {
+			Empty					=> vec![Full],
+			Point(ref p)			=> vec![UpTo(p.clone()), UpFrom(p.clone())],
+			Open(ref l, ref r)		=> vec![To(l.clone()), From(r.clone())],
+			LeftOpen(ref l, ref r)	=> vec![To(l.clone()), From(r.clone())],
+			RightOpen(ref l, ref r)	=> vec![UpTo(l.clone()), From(r.clone())],
+			Closed(ref l, ref r)	=> vec![UpTo(l.clone()), UpFrom(r.clone())],
+			UpTo(ref p)				=> vec![From(p.clone())],
+			UpFrom(ref p)			=> vec![To(p.clone())],
+			To(ref p)				=> vec![UpFrom(p.clone())],
+			From(ref p)				=> vec![UpTo(p.clone())],
+			Full					=> vec![], // Or vec![Empty]?
+		}
+	}
 
 
-    /// Returns the intersection of all of the given intervals.
-    pub fn intersect_all<I>(intervals: I) -> Self
-        where I: IntoIterator<Item=Self>
-    {
-        intervals
-            .into_iter()
-            .fold(Full, |acc, i| acc.intersect(&i))
-    }
+	/// Returns the intersection of all of the given intervals.
+	pub fn intersect_all<I>(intervals: I) -> Self
+		where I: IntoIterator<Item=Self>
+	{
+		intervals
+			.into_iter()
+			.fold(Full, |acc, i| acc.intersect(&i))
+	}
 
-    /// Returns the union of all of the given intervals.
-    pub fn union_all<I>(intervals: I) -> Vec<Self>
-        where I: IntoIterator<Item=Self>
-    {
-        let mut it = intervals.into_iter().filter(|i| !i.is_empty());
+	/// Returns the union of all of the given intervals.
+	pub fn union_all<I>(intervals: I) -> Vec<Self>
+		where I: IntoIterator<Item=Self>
+	{
+		let mut it = intervals.into_iter().filter(|i| !i.is_empty());
 
-        // Get first interval.
-        if let Some(start) = it.next() {
-            // Fold over remaining intervals.
-            it.fold(vec![start], |mut prev, next_interval| {
-                // Early exit for full interval.
-                if next_interval == Full {
-                    return vec![Full];
-                }
+		// Get first interval.
+		if let Some(start) = it.next() {
+			// Fold over remaining intervals.
+			it.fold(vec![start], |mut prev, next_interval| {
+				// Early exit for full interval.
+				if next_interval == Full {
+					return vec![Full];
+				}
 
-                let mut append = true;
-                for item in prev.iter_mut() {
-                    if !item.intersect(&next_interval).is_empty() {
-                        *item = item.enclose(&next_interval);
-                        append = false;
-                        break;
-                    }
-                }
-                if append {prev.push(next_interval);}
-                prev
-            })
-        } else {
-            Vec::new()
-        }
-    }
+				let mut append = true;
+				for item in prev.iter_mut() {
+					if !item.intersect(&next_interval).is_empty() {
+						*item = item.enclose(&next_interval);
+						append = false;
+						break;
+					}
+				}
+				if append {prev.push(next_interval);}
+				prev
+			})
+		} else {
+			Vec::new()
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Trait impls
+// Basic Trait impls
 ////////////////////////////////////////////////////////////////////////////////
-
 // Display using interval notation.
-impl<T> fmt::Display for Interval<T> 
-    where T: fmt::Display + PartialOrd + Ord + Clone 
+impl<T> fmt::Display for RawInterval<T> 
+	where T: fmt::Display + PartialOrd + Ord + Clone 
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            Empty                   => write!(f, "Ø"),
-            Point(ref p)            => write!(f, "{}", p),
-            Open(ref l, ref r)      => write!(f, "({}, {})", l, r),
-            LeftOpen(ref l, ref r)  => write!(f, "({}, {}]", l, r),
-            RightOpen(ref l, ref r) => write!(f, "[{}, {})", l, r),
-            Closed(ref l, ref r)    => write!(f, "[{}, {}]", l, r),
-            UpTo(ref p)             => write!(f, "(-∞, {})", p),
-            UpFrom(ref p)           => write!(f, "({}, ∞)", p),
-            To(ref p)               => write!(f, "(-∞, {})", p),
-            From(ref p)             => write!(f, "({}, ∞)", p),
-            Full                    => write!(f, "(-∞, ∞)"),
-        }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match self {
+			&Empty					=> write!(f, "Ø"),
+			&Point(ref p)			=> write!(f, "{}", p),
+			&Open(ref l, ref r)		=> write!(f, "({}, {})", l, r),
+			&LeftOpen(ref l, ref r)	=> write!(f, "({}, {}]", l, r),
+			&RightOpen(ref l, ref r)	=> write!(f, "[{}, {})", l, r),
+			&Closed(ref l, ref r)	=> write!(f, "[{}, {}]", l, r),
+			&UpTo(ref p)				=> write!(f, "(-∞, {})", p),
+			&UpFrom(ref p)			=> write!(f, "({}, ∞)", p),
+			&To(ref p)				=> write!(f, "(-∞, {})", p),
+			&From(ref p)				=> write!(f, "({}, ∞)", p),
+			&Full					=> write!(f, "(-∞, ∞)"),
+		}
+	}
+}
+
+// Interval-from-Point conversion.
+impl<T> From<T> for Interval<T> where T: PartialOrd + Ord + Clone {
+	#[inline]
+	fn from(t: T) -> Self {
+		Interval(Point(t))
+	}
+}
+
+impl<T> PartialEq for Interval<T> 
+	where
+		T: PartialOrd + Ord + Clone
+{
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
+	}
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Iterable traits
+////////////////////////////////////////////////////////////////////////////////
+pub trait LeftIterable: Clone {
+	fn succ(&self) -> Option<Self>;
+	fn minimum() -> Self;
+}
+
+pub trait RightIterable: Clone {
+	fn pred(&self) -> Option<Self>;
+	fn maximum() -> Self;
+}
+
+impl<T> RawInterval<T> where T: PartialOrd + Ord + LeftIterable {
+	/// Removes and returns the lowest point in the interval.
+	pub fn pop_lower(&mut self) -> Option<T> {
+		let left = match &*self {
+			&Empty				 => None,
+			&Point(ref p)		 => Some(p.clone()),
+			&Closed(ref l, _)	 => Some(l.clone()),
+			&LeftOpen(ref l, _)	 => l.succ(),
+			&RightOpen(ref l, _) => Some(l.clone()),
+			&Open(ref l, _)		 => l.succ(),
+			&To(_)				 => Some(T::minimum()),
+			&UpTo(_)			 => Some(T::minimum()),
+			&From(ref l)		 => Some(l.clone()),
+			&UpFrom(ref l)		 => l.succ(),
+			&Full				 => Some(T::minimum()),
+		};
+		
+		if let Some(nl) = left {
+			*self = match *self { 
+				Empty => Empty,
+				_	  => RawInterval::new(
+					Some(Exclude(nl.clone())), 
+					self.upper_bound()),
+			};
+			Some(nl)
+		} else {
+			*self = Empty;
+			None
+		}
+	}
+}
+
+impl<T> RawInterval<T> where T: PartialOrd + Ord + RightIterable {
+	/// Removes and returns the greatest point in the interval.
+	pub fn pop_upper(&mut self) -> Option<T> {
+		let right = match &*self {
+			&Empty				 => None,
+			&Point(ref p)		 => Some(p.clone()),
+			&Closed(_, ref r)	 => Some(r.clone()),
+			&LeftOpen(_, ref r)	 => Some(r.clone()),
+			&RightOpen(_, ref r) => r.pred(),
+			&Open(_, ref r)		 => r.pred(),
+			&To(ref r)			 => Some(r.clone()),
+			&UpTo(ref r)		 => r.pred(),
+			&From(_)			 => Some(T::maximum()),
+			&UpFrom(_)			 => Some(T::maximum()),
+			&Full				 => Some(T::maximum()),
+		};
+		
+		if let Some(nr) = right {
+			*self = match *self { 
+				Empty => Empty,
+				_	  => RawInterval::new(
+					self.lower_bound(),
+					Some(Exclude(nr.clone()))),
+			};
+			Some(nr)
+		} else {
+			*self = Empty;
+			None
+		}
+	}
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// IntervalNormalize
+////////////////////////////////////////////////////////////////////////////////
+pub trait IntervalNormalize: Sized {
+	fn normalized(self) -> Self {
+		self
+	}
+}
+
+impl<T> IntervalNormalize for Interval<T> where Interval<T>: Clone {
+    default fn normalized(self) -> Self {
+        self
     }
 }
 
-// IntervalState-from-Point conversion.
-impl<T> From<T> for Interval<T> where T: PartialOrd + Ord + Clone {
-    #[inline]
-    fn from(t: T) -> Self {
-        Interval(Point(t))
+
+/// Normalizes the an interval by clamping the lower bound to the given minimum
+/// value.
+pub fn normalize_minimum<T>(interval: Interval<T>, min: T) -> Interval<T> {
+	Interval(match interval.0 {
+		To(r)	=> Closed(min, r),
+		UpTo(r)	=> RightOpen(min, r),
+		Full	=> From(min),
+		_		=> interval.0,
+	})
+}
+
+/// Normalizes an interval by clamping the upper bound to the given maximum
+/// value.
+pub fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T>  {
+	Interval(match interval.0 {
+		From(l)		=> Closed(l, max),
+		UpFrom(l)	=> LeftOpen(l, max),
+		Full		=> To(max),
+		_			=> interval.0,
+	})
+}
+
+/// Normalizes an interval by converting left-open boundaries to closed
+/// boundaries.
+pub fn normalize_succ<T, F>(interval: Interval<T>, succ: F) -> Interval<T>
+	where F: Fn(T) -> Option<T>  
+{
+	Interval(match interval.0 {
+		LeftOpen(l, r)	=> succ(l).map_or(Empty, |nl| Closed(nl, r)),
+		Open(l, r)		=> succ(l).map_or(Empty, |nl| RightOpen(nl, r)),
+		UpFrom(l)		=> succ(l).map_or(Empty, |nl| From(nl)),
+		_				=> interval.0,
+	})
+}
+
+/// Normalizes an interval by converting right-open boundaries to closed
+/// boundaries.
+pub fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
+	where F: Fn(T) -> Option<T>
+{
+	Interval(match interval.0 {
+		RightOpen(l, r)	=> pred(r).map_or(Empty, |nr| Closed(l, nr)),
+		Open(l, r)		=> pred(r).map_or(Empty, |nr| LeftOpen(l, nr)),
+		UpTo(r)			=> pred(r).map_or(Empty, |nr| To(nr)),
+		_				=> interval.0,
+	})
+}
+
+
+
+
+
+macro_rules! interval_bounds {
+    ($t:ty ; $($rest:tt)*) => {
+        impl IntervalNormalize for Interval<$t> {
+            fn normalized(self) -> Self {
+                normalize!($($rest)* self)
+            }
+        }
+        left_iterable_impl!($t; $($rest)*);
+        right_iterable_impl!($t; $($rest)*);
     }
+}
+
+
+macro_rules! left_iterable_impl {
+	($t:ty ; found $min:expr ; found $succ:expr) => {
+		impl LeftIterable for $t {
+			fn succ(&self) -> Option<Self> {
+				($succ)(self.clone())
+			}
+			fn minimum() -> Self {
+				($min)
+			}
+		}
+	};
+	($t:ty ; hold ; found $succ:expr ; minimum = $min:expr , $($rest:tt)*) => {
+		left_iterable_impl!($t; found $min; found $succ);
+	};
+	($t:ty ; found $min:expr ; hold ; succ = $succ:expr , $($rest:tt)* ) => {
+		left_iterable_impl!($t; found $min; found $succ);
+	};
+	($t:ty ; hold ; found $succ:expr ; $i:ident = $e:expr , $($rest:tt)*) => {
+		left_iterable_impl!($t; hold; found $succ; $($rest)*);
+	};
+	($t:ty ; found $min:expr ; hold ; $i:ident = $e:expr , $($rest:tt)* ) => {
+		left_iterable_impl!($t; found $min; hold; $($rest)*);
+	};
+	($t:ty ; minimum = $min:expr , $($rest:tt)*) => {
+		left_iterable_impl!($t; found $min; hold; $($rest)*);
+	};
+	($t:ty ; succ = $succ:expr , $($rest:tt)*) => {
+		left_iterable_impl!($t; hold; $succ; $($rest)*);
+	};
+	($t:ty ; $i:ident = $e:expr , $($rest:tt)*) => {
+		left_iterable_impl!($t; $($rest)*);
+	};
+}
+
+
+macro_rules! right_iterable_impl {
+	($t:ty ; found $max:expr ; found $pred:expr) => {
+		impl RightIterable for $t {
+			fn pred(&self) -> Option<Self> {
+				($pred)(self.clone())
+			}
+			fn maximum() -> Self {
+				($max)
+			}
+		}
+	};
+	($t:ty ; hold ; found $pred:expr ; maximum = $max:expr , $($rest:tt)*) => {
+		right_iterable_impl!($t; found $max; found $pred);
+	};
+	($t:ty ; found $max:expr ; hold ; pred = $pred:expr , $($rest:tt)* ) => {
+		right_iterable_impl!($t; found $max; found $pred);
+	};
+	($t:ty ; hold ; found $pred:expr ; $i:ident = $e:expr , $($rest:tt)*) => {
+		right_iterable_impl!($t; hold; found $pred; $($rest)*);
+	};
+	($t:ty ; found $max:expr ; hold ; $i:ident = $e:expr , $($rest:tt)* ) => {
+		right_iterable_impl!($t; found $max; hold; $($rest)*);
+	};
+	($t:ty ; maximum = $max:expr , $($rest:tt)*) => {
+		right_iterable_impl!($t; found $max; hold; $($rest)*);
+	};
+	($t:ty ; pred = $pred:expr , $($rest:tt)*) => {
+		right_iterable_impl!($t; hold; $pred; $($rest)*);
+	};
+	($t:ty ; $i:ident = $e:expr , $($rest:tt)*) => {
+		right_iterable_impl!($t; $($rest)*);
+	};
+
+}
+
+
+macro_rules! normalize {
+    (minimum = $min:expr , $($rest:tt)*) => {
+        normalize_minimum(normalize!($($rest)*), $min)
+    };
+    (maximum = $max:expr , $($rest:tt)*) => {
+        normalize_maximum(normalize!($($rest)*), $max)
+    };
+    (succ = $succ:expr , $($rest:tt)*) => {
+        normalize_succ(normalize!($($rest)*), $succ)
+    };
+    (pred = $pred:expr , $($rest:tt)*) => {
+        normalize_pred(normalize!($($rest)*), $pred)
+    };
+    ($e:expr) => {$e};
+}
+
+
+macro_rules! std_integer_normalization_impls {
+	($($t:ident),*) => {$(
+		interval_bounds! { $t;
+		    minimum = std::$t::MIN,
+		    maximum = std::$t::MAX,
+		    succ = |n| if n < std::$t::MAX {Some(n + 1)} else {None},
+		    pred = |n| if n > std::$t::MIN {Some(n - 1)} else {None},
+		}
+	)*};
+}
+
+
+std_integer_normalization_impls![
+	u8, u16, u32, u64, usize,
+	i8, i16, i32, i64, isize
+];
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Local tests
+////////////////////////////////////////////////////////////////////////////////
+#[cfg(test)]
+mod tests {
+	use interval::Bound;
+	use super::*;
+
+	#[test]
+	fn raw_interval_new_1() {
+		let l = Bound::Include(12);
+		let r = Bound::Include(16);
+		let int = RawInterval::new(Some(l), Some(r));
+		
+		assert_eq!(int.infimum(), Some(12));
+		assert_eq!(int.supremum(), Some(16));
+	}
+
+
+	#[test]
+	fn raw_interval_new_2() {
+		let l = Bound::Include(12);
+		let r = Bound::Include(16);
+		let int = RawInterval::new(Some(r), Some(l));
+		
+		assert!(int.is_empty());
+	}
+
+
+	#[test]
+	fn raw_interval_open() {
+		let int = RawInterval::open(0, 2);
+		
+		assert_eq!(int.infimum(), Some(0));
+		assert_eq!(int.supremum(), Some(2));
+		assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
+		assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
+	}
+
+	#[test]
+	fn raw_interval_left_open() {
+		let int = RawInterval::left_open(0, 2);
+		
+		assert_eq!(int.infimum(), Some(0));
+		assert_eq!(int.supremum(), Some(2));
+		assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
+		assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
+	}
+
+	#[test]
+	fn raw_interval_right_open() {
+		let int = RawInterval::right_open(0, 2);
+		
+		assert_eq!(int.infimum(), Some(0));
+		assert_eq!(int.supremum(), Some(2));
+		assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+		assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
+	}
+
+	#[test]
+	fn raw_interval_closed() {
+		let int = RawInterval::closed(0, 2);
+		
+		assert_eq!(int.infimum(), Some(0));
+		assert_eq!(int.supremum(), Some(2));
+		assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+		assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
+	}
+
+	#[test]
+	fn raw_interval_is_empty() {
+		let a = RawInterval::closed(0, 2);
+		let b = RawInterval::open(0, 0);
+		
+		assert!(!a.is_empty());
+		assert!(b.is_empty());
+	}
+
+	#[test]
+	fn raw_interval_lower_bound() {
+		let int = RawInterval::open(0, 2);
+		
+		assert_eq!(int.lower_bound(), Some(Bound::Exclude(0)));
+	}
+
+	#[test]
+	fn raw_interval_upper_bound() {
+		let int = RawInterval::open(0, 2);
+		
+		assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
+	}
+	
+	#[test]
+	fn raw_interval_infimum() {
+		let int = RawInterval::open(0, 2);
+		
+		assert_eq!(int.infimum(), Some(0));
+	}
+
+	#[test]
+	fn raw_interval_supremum() {
+		let int = RawInterval::open(0, 2);
+		
+		assert_eq!(int.supremum(), Some(2));
+	}
+
+	#[test]
+	fn raw_interval_contains() {
+		let int = RawInterval::left_open(0, 2);
+		
+		assert!(!int.contains(&0));
+		assert!(int.contains(&1));
+		assert!(int.contains(&2));
+		assert!(!int.contains(&3));
+	}
+
+	#[test]
+	fn raw_interval_enclose() {
+		let a = RawInterval::right_open(0, 2);
+		let b = RawInterval::closed(1, 3);
+		
+		assert_eq!(a.enclose(&b), RawInterval::closed(0, 3));
+	}
+
+	#[test]
+	fn raw_interval_intersect() {
+		let a = RawInterval::right_open(0, 2);
+		let b = RawInterval::closed(1, 3);
+		
+		assert_eq!(a.intersect(&b), RawInterval::right_open(1, 2));
+	}
+
+	#[test]
+	fn raw_interval_union_1() {
+		let a = RawInterval::right_open(0, 2);
+		let b = RawInterval::closed(1, 3);
+		
+		assert_eq!(a.union(&b), vec![RawInterval::closed(0, 3)]);
+	}
+
+	#[test]
+	fn raw_interval_union_2() {
+		let a = RawInterval::right_open(0, 2);
+		let b = RawInterval::closed(3, 4);
+		
+		assert_eq!(a.union(&b), vec![a, b]);
+	}
+
+	#[test]
+	fn raw_interval_minus_1() {
+		let a = RawInterval::right_open(0, 2);
+		let b = RawInterval::closed(1, 3);
+		
+		assert_eq!(a.minus(&b), vec![RawInterval::right_open(0, 1)]);
+	}
+
+	#[test]
+	fn raw_interval_minus_2() {
+		let a = RawInterval::closed(0, 5);
+		let b = RawInterval::closed(1, 3);
+		
+		assert_eq!(a.minus(&b), vec![
+		    RawInterval::right_open(0, 1),
+		    RawInterval::left_open(3, 5),
+		]);
+	}
+
+	#[test]
+	fn raw_interval_complement() {
+		let int = RawInterval::right_open(0, 2);
+		
+		assert_eq!(int.complement(), vec![
+		    RawInterval::new(None, Some(Bound::Exclude(0))),
+		    RawInterval::new(Some(Bound::Include(2)), None),
+		]);
+	}
+
+	#[test]
+	fn raw_interval_intersect_all() {
+		let ints = vec![
+		    RawInterval::open(0, 2),
+		    RawInterval::open(-1, 1),
+		    RawInterval::open(0, 1),
+		    RawInterval::closed(0, 1),
+		    RawInterval::open(0, 1),
+		];
+		assert_eq!(RawInterval::intersect_all(ints), RawInterval::open(0, 1));
+	}
+
+	#[test]
+	fn raw_interval_union_all() {
+		let ints = vec![
+		    RawInterval::open(0, 2),
+		    RawInterval::open(-1, 1),
+		    RawInterval::open(0, 1),
+		    RawInterval::closed(0, 1),
+		    RawInterval::open(0, 1),
+		];
+		assert_eq!(
+			RawInterval::union_all(ints), 
+			vec![RawInterval::open(-1, 2)]
+		);
+	}
 }

@@ -25,6 +25,9 @@
 //! Provides a basic bounded interval type for doing complex set selections.
 //!
 ////////////////////////////////////////////////////////////////////////////////
+
+#![feature(specialization)]
+
 #[warn(missing_docs)]
 mod bound;
 #[warn(missing_docs)]

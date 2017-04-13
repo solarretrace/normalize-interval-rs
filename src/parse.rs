@@ -27,7 +27,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use interval::Interval;
+use interval::{Interval, IntervalNormalize};
 use selection::Selection;
 
 
@@ -127,7 +127,7 @@ pub enum ParseError<'t> {
 // Selection parser
 ////////////////////////////////////////////////////////////////////////////////
 // Adds parsing functions to `Selection`.
-impl<T> Selection<T> where T: SelectionElement + PartialOrd + Ord + Clone {
+impl<T> Selection<T> where T: SelectionElement + PartialOrd + Ord + Clone + IntervalNormalize {
 	/// Parses the given string into a `Selection`.
 	///
 	/// # Errors
