@@ -27,7 +27,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use interval::{Interval, IntervalNormalize};
+use interval::{Interval, IntervalBounds, IntervalNormalize};
 use selection::Selection;
 
 
@@ -36,7 +36,7 @@ use selection::Selection;
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides functions for parsing a type. Used by `Selection<T>` to parse the
 /// intervals and elements of the selection.
-pub trait SelectionElement where Self: Sized {
+pub trait SelectionElement where Self: Sized + IntervalBounds {
 	/// Parses the given string into a `Self`.
 	///
 	/// # Errors
@@ -127,7 +127,7 @@ pub enum ParseError<'t> {
 // Selection parser
 ////////////////////////////////////////////////////////////////////////////////
 // Adds parsing functions to `Selection`.
-impl<T> Selection<T> where T: SelectionElement + PartialOrd + Ord + Clone + IntervalNormalize {
+impl<T> Selection<T> where T: SelectionElement + IntervalNormalize {
 	/// Parses the given string into a `Selection`.
 	///
 	/// # Errors

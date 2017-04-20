@@ -28,7 +28,7 @@
 
 // Local imports.
 use bound::Bound;
-use interval::{Interval, IntervalNormalize};
+use interval::{Interval, IntervalBounds};
 
 // Standard imports.
 use std::collections::{btree_set, BTreeSet};
@@ -38,28 +38,37 @@ use std::cmp::Ordering;
 use Bound::*;
 use self::Tine::*;
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Selection
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly non-contiguous selection of intervals.
 #[derive(Debug, PartialEq, Clone)]
-pub struct Selection<T> 
-	where
-		T: PartialOrd + Ord + Clone, 
-		Interval<T>: IntervalNormalize 
-{
+pub struct Selection<T> where T: IntervalBounds {
 	disjunction_map: DisjunctionMap<T>,
 }
 
-impl<T> Selection<T>
-	where
-		T: PartialOrd + Ord + Clone, 
-		Interval<T>: IntervalNormalize 
-{
-	pub fn new(intervals: Vec<Interval<T>>) -> Self {
+impl<T> Selection<T> where T: IntervalBounds {
+	/// Returns an empty Selection.
+	pub fn empty() -> Self {
+		Selection {
+			disjunction_map: DisjunctionMap::new(),
+		}
+	}
+
+	/// Returns a Selection over the given intervals.
+	pub fn new<I>(intervals: I) -> Self
+		where I: IntoIterator<Item=Interval<T>>
+	{
 		Selection {
 			disjunction_map: DisjunctionMap::from_intervals(intervals),
 		}
+	}
+
+	/// Inserts all of the points in the given interval into the Selection.
+	pub fn union_insert(&mut self, interval: Interval<T>) {
+		self.disjunction_map.union_insert(interval);
+		println!("{:?}", self.disjunction_map);
 	}
 }
 
@@ -67,8 +76,12 @@ impl<T> Selection<T>
 // Tine
 ////////////////////////////////////////////////////////////////////////////////
 /// A portion of an interval.
+///
+/// Tines are used to implement ordering over the interval bounds in such a way
+/// that the `BTreeSet` will always be able to split at the appropriate place
+/// for a given bound type.
 #[derive(Debug, PartialEq, Clone)]
-enum Tine<T> where T: PartialOrd + Ord + Clone {
+enum Tine<T> where T: IntervalBounds {
 	/// A lower bound.
 	Lo(Option<Bound<T>>),
 	/// A point interval.
@@ -77,8 +90,8 @@ enum Tine<T> where T: PartialOrd + Ord + Clone {
 	Hi(Option<Bound<T>>),
 }
 
-impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
-
+impl<T> Tine<T> where T: IntervalBounds {
+	/// Returns whether the Tine represents a lower bound.
 	pub fn is_lo(&self) -> bool {
 		match self {
 			&Lo(_) => true,
@@ -86,6 +99,7 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 
+	/// Returns whether the Tine represents an upper bound.
 	pub fn is_hi(&self) -> bool {
 		match self {
 			&Hi(_) => true,
@@ -93,6 +107,7 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 
+	/// Returns the value of the bound.
 	pub fn val(&self) -> Option<T> {
 		match *self {
 			Pt(ref i)		=> i.infimum(),
@@ -102,6 +117,7 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 
+	/// Converts open bounds to closed bounds.
 	pub fn close(self) -> Self {
 		match self {
 			Lo(Some(Exclude(l))) => Lo(Some(Include(l))),
@@ -111,6 +127,7 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
 	}
 	
+	/// Compares `Tine` types.
 	pub fn cmp_tine_types(&self, other: &Self) -> Ordering {
 		match (self, other) {
 			(&Lo(_), &Pt(_)) => Ordering::Less,
@@ -123,6 +140,7 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 	
+	/// Compares `Bound` types.
 	pub fn cmp_bound_types(&self, other: &Self) -> Ordering {
 		match (self, other) {
 			(&Lo(Some(ref a)), &Lo(Some(ref b))) => match (a, b) {
@@ -140,8 +158,8 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 	}
 }
 
-
-impl<T> Eq for Tine<T> where T: PartialOrd + Ord + Clone {}
+// Tine ordering is total.
+impl<T> Eq for Tine<T> where T: IntervalBounds {}
 
 
 // Tine comparison:
@@ -156,13 +174,13 @@ impl<T> Eq for Tine<T> where T: PartialOrd + Ord + Clone {}
 //     else if both are Hi
 //         compare Exclude < Include
 
-impl<T> PartialOrd for Tine<T> where T: PartialOrd + Ord + Clone {
+impl<T> PartialOrd for Tine<T> where T: IntervalBounds {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 		Some(self.cmp(other))
 	}
 }
 
-impl<T> Ord for Tine<T> where T: PartialOrd + Ord + Clone {
+impl<T> Ord for Tine<T> where T: IntervalBounds {
 	fn cmp(&self, other: &Self) -> Ordering {
 		match (self.val(), other.val()) {
 			(Some(ref a), Some(ref b)) => {
@@ -176,7 +194,7 @@ impl<T> Ord for Tine<T> where T: PartialOrd + Ord + Clone {
 					_				=> res,
 				}
 			},
-			_						   => self.cmp_tine_types(other),
+			_						   => self.cmp_tine_types(other).reverse(),
 		}
 	}
 }
@@ -187,11 +205,11 @@ impl<T> Ord for Tine<T> where T: PartialOrd + Ord + Clone {
 // DisjunctionMap
 ////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, PartialEq, Clone)]
-struct DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
+struct DisjunctionMap<T> where T: IntervalBounds {
 	tine_map: BTreeSet<Tine<T>>,
 }
 
-impl<T> DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
+impl<T> DisjunctionMap<T> where T: IntervalBounds {
 	pub fn new() -> Self {
 		DisjunctionMap {
 			tine_map: BTreeSet::new(),
@@ -252,9 +270,12 @@ impl<T> DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
 	fn union_normal(&mut self, lb: Tine<T>, ub: Tine<T>) {
 		let mut r_map = self.tine_map.split_off(&lb);
 		r_map = r_map.split_off(&ub);
-		
+		println!("\t{:?}", self.tine_map);
+		println!("\t{:?}", r_map);
+
 		let before = self.tine_map.iter().next_back().cloned();
 		let after = r_map.iter().next().cloned();
+
 		
 		match (&before.as_ref().map(Tine::is_lo), 
 			   &after.as_ref().map(Tine::is_hi))
@@ -269,24 +290,25 @@ impl<T> DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
 	}
 }
 
-impl<T> IntoIterator for DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
+impl<T> IntoIterator for DisjunctionMap<T> where T: IntervalBounds {
 	type Item = Interval<T>;
-    type IntoIter = DisjunctionMapIter<T>;
+    type IntoIter = SelectionIter<T>;
     fn into_iter(self) -> Self::IntoIter {
-    	DisjunctionMapIter {
+    	SelectionIter {
     		tine_iter: self.tine_map.into_iter(),
     	}
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DisjunctionMapIter
+// SelectionIter
 ////////////////////////////////////////////////////////////////////////////////
-pub struct DisjunctionMapIter<T> where T: PartialOrd + Ord + Clone {
+/// An iterator over the intervals in 
+pub struct SelectionIter<T> where T: IntervalBounds {
 	tine_iter: btree_set::IntoIter<Tine<T>>,
 }
 
-impl<T> Iterator for DisjunctionMapIter<T> where T: PartialOrd + Ord + Clone {
+impl<T> Iterator for SelectionIter<T> where T: IntervalBounds {
 	type Item = Interval<T>;
 	fn next(&mut self) -> Option<Self::Item> {
 		match self.tine_iter.next() {
@@ -308,31 +330,83 @@ mod tests {
 	use ::interval::Interval;
 	use super::*;
 
-	#[test]
-	fn disjunction_map_insert_1() {
-		let mut dm: DisjunctionMap<u32> = DisjunctionMap::new();
 
-		let a = Interval::closed(0, 15);
-		let b = Interval::closed(20, 25);
-		dm.union_insert(b.clone());
-		dm.union_insert(a.clone());
-
-		let dm_res: Vec<Interval<u32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![a, b])
-	}
+	#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	struct Opaque(i32);
 
 	#[test]
-	fn disjunction_map_insert_2() {
-		let mut dm: DisjunctionMap<u32> = DisjunctionMap::new();
+	fn disjunction_map_insert_disjoint() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
-		let a = Interval::closed(0, 15);
-		let b = Interval::closed(20, 25);
-		let c = Interval::closed(14, 26);
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(20), Opaque(25));
+		let c = Interval::open(Opaque(30), Opaque(35));
 		dm.union_insert(b.clone());
 		dm.union_insert(a.clone());
 		dm.union_insert(c.clone());
 
-		let dm_res: Vec<Interval<u32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::closed(0, 26)])
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![a, b, c]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(20), Opaque(25));
+		let c = Interval::open(Opaque(14), Opaque(26));
+		dm.union_insert(b.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(26))]);
+	}
+
+
+	#[test]
+	fn disjunction_map_insert_disjoint_close() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(15), Opaque(25));
+		let c = Interval::open(Opaque(25), Opaque(30));
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![a, b, c]);
+	}
+
+	// #[test]
+	// fn disjunction_map_insert_overlap_close() {
+	// 	let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+	// 	let a = Interval::open(Opaque(0), Opaque(15));
+	// 	let b = Interval::closed(Opaque(15), Opaque(25));
+	// 	let c = Interval::open(Opaque(25), Opaque(30));
+	// 	dm.union_insert(c.clone());
+	// 	dm.union_insert(a.clone());
+	// 	dm.union_insert(b.clone());
+
+	// 	let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+	// 	assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
+	// }
+
+	#[test]
+	fn disjunction_map_insert_disjoint_point() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(15), Opaque(25));
+		let c = Interval::point(Opaque(15));
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
 	}
 }

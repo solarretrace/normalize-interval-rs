@@ -30,14 +30,18 @@
 use bound::*;
 
 // Standard imports.
-use std;
 use std::cmp::Ordering;
 use std::fmt;
 use std::convert::From;
+use std;
 
 // Local enum shortcuts.
 use Bound::*;
 use self::RawInterval::*;
+
+/// Marker trait for interval-compatable types.
+pub trait IntervalBounds: PartialOrd +  Ord +  Clone + fmt::Debug {}
+impl<T> IntervalBounds for T where T: PartialOrd  +  Ord + Clone + fmt::Debug {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interval<T>
@@ -48,7 +52,7 @@ pub struct Interval<T>(RawInterval<T>);
 
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.
-impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
+impl<T> Interval<T> where T: IntervalBounds {
 	/// Constructs a new interval from the given bounds. If the right bound
 	/// point is less than the left bound point, an empty interval will be 
 	/// returned.
@@ -57,22 +61,40 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	///
 	/// ```rust
 	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	/// 
+	/// let l = Bound::Exclude(Opaque(15));
+	/// let r = Bound::Exclude(Opaque(30));
 	///
-	/// let l = Bound::Include(12);
-	/// let r = Bound::Include(16);
 	/// let int = Interval::new(Some(l), Some(r));
 	/// 
-	/// assert_eq!(int.infimum(), Some(12));
-	/// assert_eq!(int.supremum(), Some(16));
+	/// assert_eq!(int.lower_bound(), Some(l));
+	/// assert_eq!(int.upper_bound(), Some(r));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let l = Bound::Exclude(15);
+	/// let r = Bound::Exclude(30);
+	///
+	/// let int = Interval::new(Some(l), Some(r));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(16)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(29)));
 	/// ```
 	///
 	/// If the arguments are out of order, an empty interval will be returned:
 	///
 	/// ```rust
-	/// use interval::{Bound, Interval};
+	/// # use interval::{Bound, Interval};
+	/// let l = Bound::Include(15);
+	/// let r = Bound::Include(30);
 	///
-	/// let l = Bound::Include(12);
-	/// let r = Bound::Include(16);
 	/// let int = Interval::new(Some(r), Some(l));
 	/// 
 	/// assert!(int.is_empty());
@@ -81,8 +103,9 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		Interval::normalized(RawInterval::new(left, right))
 	}
 
+	/// Returns the normalized interval.
 	fn normalized(raw: RawInterval<T>) -> Self {
-		Interval(raw).normalized()
+		IntervalNormalize::normalized(Interval(raw))
 	}
 	
 	/// Returns an empty interval.
@@ -97,87 +120,326 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		Interval(RawInterval::Point(point))
 	}
 	
-	/// Constructs a new open interval from the given points. If the right
-	/// point is less than the left point, an empty interval will be returned.
+	/// Constructs a new open interval from the given points.
 	///
 	/// # Example
 	///
 	/// ```rust
 	/// use interval::{Bound, Interval};
-	///
-	/// let int = Interval::open(0, 6);
 	/// 
-	/// assert_eq!(int.infimum(), Some(1));
-	/// assert_eq!(int.supremum(), Some(5));
-	/// assert_eq!(int.lower_bound(), Some(Bound::Include(1)));
-	/// assert_eq!(int.upper_bound(), Some(Bound::Include(5)));
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::open(Opaque(15), Opaque(30));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Exclude(Opaque(15))));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Exclude(Opaque(30))));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::open(15, 30);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(16)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(29)));
+	/// ```
+	///
+	/// If the arguments are out of order, an empty interval will be returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::open(30, 15);
+	/// 
+	/// assert!(int.is_empty());
 	/// ```
 	pub fn open(left: T, right: T) -> Self {
 		Interval::normalized(RawInterval::open(left, right))
 	}
 	
-	/// Constructs a new left-open interval from the given points. If the
-	/// right bound point is less than the left bound point, an empty interval
-	/// will be returned.
+	/// Constructs a new left-open interval from the given points.
 	///
 	/// # Example
 	///
 	/// ```rust
 	/// use interval::{Bound, Interval};
-	///
-	/// let int = Interval::left_open(0, 6);
 	/// 
-	/// assert_eq!(int.infimum(), Some(1));
-	/// assert_eq!(int.supremum(), Some(6));
-	/// assert_eq!(int.lower_bound(), Some(Bound::Include(1)));
-	/// assert_eq!(int.upper_bound(), Some(Bound::Include(6)));
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::left_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Exclude(Opaque(15))));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(Opaque(30))));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::left_open(15, 30);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(16)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(30)));
+	/// ```
+	///
+	/// If the arguments are out of order, an empty interval will be returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::left_open(30, 15);
+	/// 
+	/// assert!(int.is_empty());
 	/// ```
 	pub fn left_open(left: T, right: T) -> Self {
 		Interval::normalized(RawInterval::left_open(left, right))
 	}
 	
-	/// Constructs a new right-open interval from the given points. If the
-	/// right bound point is less than the left bound point, an empty interval
-	/// will be returned.
+	/// Constructs a new right-open interval from the given points.
 	///
 	/// # Example
 	///
 	/// ```rust
 	/// use interval::{Bound, Interval};
-	///
-	/// let int = Interval::right_open(0, 6);
 	/// 
-	/// assert_eq!(int.infimum(), Some(0));
-	/// assert_eq!(int.supremum(), Some(5));
-	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
-	/// assert_eq!(int.upper_bound(), Some(Bound::Include(5)));
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::right_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(Opaque(15))));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Exclude(Opaque(30))));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::right_open(15, 30);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(15)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(29)));
+	/// ```
+	///
+	/// If the arguments are out of order, an empty interval will be returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::right_open(30, 15);
+	/// 
+	/// assert!(int.is_empty());
 	/// ```
 	pub fn right_open(left: T, right: T) -> Self {
 		Interval::normalized(RawInterval::right_open(left, right))
 	}
 	
-	/// Constructs a new closed interval from the given points. If the
-	/// right bound point is less than the left bound point, an empty interval
-	/// will be returned.
+	/// Constructs a new closed interval from the given points. If the interval
+	/// has a normalized representation, it will be  normalized before being
+	/// returned.
 	///
 	/// # Example
 	///
 	/// ```rust
 	/// use interval::{Bound, Interval};
 	///
-	/// let int = Interval::closed(0, 2);
+	/// let int = Interval::closed(15, 30);
 	/// 
-	/// assert_eq!(int.infimum(), Some(0));
-	/// assert_eq!(int.supremum(), Some(2));
-	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
-	/// assert_eq!(int.upper_bound(), Some(Bound::Include(2)));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(15)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(30)));
+	/// ```
+	///
+	/// If the arguments are out of order, an empty interval will be returned:
+	///
+	/// ```rust
+	/// # use interval::Interval;
+	/// let int = Interval::closed(30, 15);
+	/// 
+	/// assert!(int.is_empty());
 	/// ```
 	pub fn closed(left: T, right: T) -> Self {
 		// Normalization not needed for closed intervals.
 		Interval::normalized(RawInterval::closed(left, right))
 	}
+
+	/// Constructs a new interval including the given point and all points
+	/// greater than it.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::from(Opaque(15));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(Opaque(15))));
+	/// assert_eq!(int.upper_bound(), None);
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::from(15);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(15)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(std::i32::MAX)));
+	/// ```
+	pub fn from(point: T) -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::From(point))
+	}
+
+	/// Constructs a new interval including the given point and all points
+	/// less than it.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::to(Opaque(15));
+	/// 
+	/// assert_eq!(int.lower_bound(), None);
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(Opaque(15))));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::to(15);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(std::i32::MIN)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(15)));
+	/// ```
+	pub fn to(point: T) -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::To(point))
+	}
+
+	/// Constructs a new interval containing all points greater than the given
+	/// point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::up_from(Opaque(15));
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Exclude(Opaque(15))));
+	/// assert_eq!(int.upper_bound(), None);
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::up_from(15);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(16)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(std::i32::MAX)));
+	/// ```
+	pub fn up_from(point: T) -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::UpFrom(point))
+	}
+
+	/// Constructs a new interval containing all points less than the given
+	/// point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::up_to(Opaque(15));
+	/// 
+	/// assert_eq!(int.lower_bound(), None);
+	/// assert_eq!(int.upper_bound(), Some(Bound::Exclude(Opaque(15))));
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::up_to(15);
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(std::i32::MIN)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(14)));
+	/// ```
+	pub fn up_to(point: T) -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::UpTo(point))
+	}
+
+	/// Constructs a new interval containing every point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let int = Interval::<Opaque>::full();
+	/// 
+	/// assert_eq!(int.lower_bound(), None);
+	/// assert_eq!(int.upper_bound(), None);
+	/// ```
+	///
+	/// If the interval has a normalized representation, it will be
+	/// normalized before being returned:
+	///
+	/// ```rust
+	/// # use interval::{Bound, Interval};
+	/// let int = Interval::<i32>::full();
+	/// 
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(std::i32::MIN)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(std::i32::MAX)));
+	/// ```
+	pub fn full() -> Self {
+		// Normalization not needed for closed intervals.
+		Interval::normalized(RawInterval::Full)
+	}
 	
 	/// Returns whether the interval excludes any of its boundary points.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::left_open(Opaque(15), Opaque(30));
+	/// let b = Interval::closed(Opaque(15), Opaque(30));
+	/// 
+	/// assert!(a.is_open());
+	/// assert!(!b.is_open())
+	/// ```
 	pub fn is_open(&self) -> bool {
 		match self.0 {
 			Point(_)	 => false,
@@ -187,6 +449,21 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 	
 	/// Returns whether the interval includes only one of its boundary points.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::left_open(Opaque(15), Opaque(30));
+	/// let b = Interval::open(Opaque(15), Opaque(30));
+	/// 
+	/// assert!(a.is_half_open());
+	/// assert!(!b.is_half_open())
+	/// ```
 	pub fn is_half_open(&self) -> bool {
 		match self.0 {
 			LeftOpen(_, _)	=> true,
@@ -198,6 +475,21 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 	
 	/// Returns whether the interval includes all of its boundary points.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::closed(Opaque(15), Opaque(30));
+	/// let b = Interval::left_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert!(a.is_closed());
+	/// assert!(!b.is_closed())
+	/// ```
 	pub fn is_closed(&self) -> bool {
 		match self.0 {
 			Empty		 => true,
@@ -215,11 +507,11 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::Interval;
 	///
-	/// let a = Interval::closed(0, 6);
-	/// let b = Interval::open(0, 0);
+	/// let a = Interval::<u32>::empty();
+	/// let b = Interval::closed(15, 30);
 	/// 
-	/// assert!(!a.is_empty());
-	/// assert!(b.is_empty());
+	/// assert!(a.is_empty());
+	/// assert!(!b.is_empty())
 	/// ```
 	pub fn is_empty(&self) -> bool {
 		match self.0 {
@@ -237,7 +529,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// use interval::Interval;
 	///
 	/// let a = Interval::closed(1, 1);
-	/// let b = Interval::closed(0, 6);
+	/// let b = Interval::closed(15, 30);
 	/// 
 	/// assert!(a.is_degenerate());
 	/// assert!(!b.is_degenerate());
@@ -257,16 +549,13 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// use interval::Interval;
 	///
 	/// let a = Interval::<i32>::new(None, None);
-	/// let b = Interval::closed(-100, 100);
+	/// let b = Interval::closed(15, 30);
 	/// 
 	/// assert!(a.is_full());
 	/// assert!(!b.is_full());
 	/// ```
 	pub fn is_full(&self) -> bool {
-		match self.0 {
-			Full => true,
-			_	 => false,
-		}
+		*self == Interval::normalized(Full)
 	}
 	
 	/// Returns whether the interval is bounded on both sides.
@@ -276,7 +565,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::{Bound, Interval};
 	///
-	/// let int = Interval::closed(0, 6);
+	/// let int = Interval::closed(15, 30);
 	/// 
 	/// assert!(int.is_bounded());
 	/// ```
@@ -298,9 +587,9 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::{Bound, Interval};
 	///
-	/// let int = Interval::closed(0, 6);
+	/// let int = Interval::closed(15, 30);
 	/// 
-	/// assert_eq!(int.lower_bound(), Some(Bound::Include(0)));
+	/// assert_eq!(int.lower_bound(), Some(Bound::Include(15)));
 	/// ```
 	pub fn lower_bound(&self) -> Option<Bound<T>> {
 		self.0.lower_bound()
@@ -313,9 +602,9 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::{Bound, Interval};
 	///
-	/// let int = Interval::closed(0, 6);
+	/// let int = Interval::closed(15, 30);
 	/// 
-	/// assert_eq!(int.upper_bound(), Some(Bound::Include(6)));
+	/// assert_eq!(int.upper_bound(), Some(Bound::Include(30)));
 	/// ```
 	pub fn upper_bound(&self) -> Option<Bound<T>> {
 		self.0.upper_bound()
@@ -328,9 +617,23 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::Interval;
 	///
-	/// let int = Interval::closed(0, 6);
+	/// let int = Interval::closed(15, 30);
 	/// 
-	/// assert_eq!(int.infimum(), Some(0));
+	/// assert_eq!(int.infimum(), Some(15));
+	/// ```
+	///
+	/// The infimum need not lie within the interval. This will occur if the 
+	/// lower bound of the normalized interval is open:
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::left_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert_eq!(a.infimum(), Some(Opaque(15)));
 	/// ```
 	pub fn infimum(&self) -> Option<T> {
 		self.0.infimum()
@@ -343,9 +646,23 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// ```rust
 	/// use interval::Interval;
 	///
-	/// let int = Interval::closed(0, 6);
+	/// let int = Interval::closed(15, 30);
 	/// 
-	/// assert_eq!(int.supremum(), Some(6));
+	/// assert_eq!(int.supremum(), Some(30));
+	/// ```
+	///
+	/// The supremum need not lie within the interval. This will occur if the 
+	/// lower bound of the normalized interval is open:
+	///
+	/// ```rust
+	/// use interval::{Bound, Interval};
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::right_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert_eq!(a.supremum(), Some(Opaque(30)));
 	/// ```
 	pub fn supremum(&self) -> Option<T> {
 		self.0.supremum()
@@ -548,7 +865,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	///
 	/// assert!(Interval::open(0, 0).into_non_empty().is_none());
 	///
-	/// let int = Interval::open(0, 1);
+	/// let int = Interval::open(0, 2);
 	/// assert_eq!(int.into_non_empty(), Some(int));
 	/// ```
 	pub fn into_non_empty(self) -> Option<Self> {
@@ -661,7 +978,7 @@ enum RawInterval<T> {
 	Full,
 }
 
-impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
+impl<T> RawInterval<T> where T: IntervalBounds {
 	/// Constructs a new interval from the given bounds. If the right bound
 	/// point is less than the left bound point, an empty interval will be 
 	/// returned.
@@ -683,6 +1000,32 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 			},
 			(None,	   None)	 => Full,
 		}
+	}
+
+	/// Returns the normalized interval.
+	pub fn normalize(&mut self) {
+		*self = match self.clone() {
+			Open(l, r)		=> match T::cmp(&l, &r) {
+				Ordering::Less => Open(l, r),
+				_			   => Empty,
+			},
+			LeftOpen(l, r)	=> match T::cmp(&l, &r) {
+				Ordering::Less	  => LeftOpen(l, r),
+				Ordering::Equal	  => Point(l),
+				Ordering::Greater => Empty,
+			},
+			RightOpen(l, r)	=> match T::cmp(&l, &r) {
+				Ordering::Less	  => RightOpen(l, r),
+				Ordering::Equal	  => Point(l),
+				Ordering::Greater => Empty,
+			},
+			Closed(l, r)	=> match T::cmp(&l, &r) {
+				Ordering::Less	  => Closed(l, r),
+				Ordering::Equal	  => Point(l),
+				Ordering::Greater => Empty,
+			},
+			_				=> self.clone(),
+		};
 	}
 	
 	/// Constructs a new open interval from the given points. If the right
@@ -897,38 +1240,33 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 // Basic Trait impls
 ////////////////////////////////////////////////////////////////////////////////
 // Display using interval notation.
-impl<T> fmt::Display for RawInterval<T> 
-	where T: fmt::Display + PartialOrd + Ord + Clone 
-{
+impl<T> fmt::Display for RawInterval<T> where T: IntervalBounds + fmt::Display {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
-			&Empty					=> write!(f, "Ø"),
-			&Point(ref p)			=> write!(f, "{}", p),
-			&Open(ref l, ref r)		=> write!(f, "({}, {})", l, r),
-			&LeftOpen(ref l, ref r)	=> write!(f, "({}, {}]", l, r),
-			&RightOpen(ref l, ref r)	=> write!(f, "[{}, {})", l, r),
-			&Closed(ref l, ref r)	=> write!(f, "[{}, {}]", l, r),
-			&UpTo(ref p)				=> write!(f, "(-∞, {})", p),
-			&UpFrom(ref p)			=> write!(f, "({}, ∞)", p),
-			&To(ref p)				=> write!(f, "(-∞, {})", p),
-			&From(ref p)				=> write!(f, "({}, ∞)", p),
-			&Full					=> write!(f, "(-∞, ∞)"),
+			&Empty					 => write!(f, "Ø"),
+			&Point(ref p)			 => write!(f, "{}", p),
+			&Open(ref l, ref r)		 => write!(f, "({}, {})", l, r),
+			&LeftOpen(ref l, ref r)	 => write!(f, "({}, {}]", l, r),
+			&RightOpen(ref l, ref r) => write!(f, "[{}, {})", l, r),
+			&Closed(ref l, ref r)	 => write!(f, "[{}, {}]", l, r),
+			&UpTo(ref p)			 => write!(f, "(-∞, {})", p),
+			&UpFrom(ref p)			 => write!(f, "({}, ∞)", p),
+			&To(ref p)				 => write!(f, "(-∞, {})", p),
+			&From(ref p)			 => write!(f, "({}, ∞)", p),
+			&Full					 => write!(f, "(-∞, ∞)"),
 		}
 	}
 }
 
 // Interval-from-Point conversion.
-impl<T> From<T> for Interval<T> where T: PartialOrd + Ord + Clone {
+impl<T> From<T> for Interval<T> where T: IntervalBounds {
 	#[inline]
 	fn from(t: T) -> Self {
 		Interval(Point(t))
 	}
 }
 
-impl<T> PartialEq for Interval<T> 
-	where
-		T: PartialOrd + Ord + Clone
-{
+impl<T> PartialEq for Interval<T> where T: IntervalBounds {
 	fn eq(&self, other: &Self) -> bool {
 		self.0 == other.0
 	}
@@ -938,17 +1276,68 @@ impl<T> PartialEq for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 // Iterable traits
 ////////////////////////////////////////////////////////////////////////////////
+impl<T> Iterator for Interval<T>
+	where T: IntervalBounds + LeftIterable, Interval<T>: IntervalNormalize
+{
+	type Item = T;
+	fn next(&mut self) -> Option<T> {
+		let next = self.0.next();
+		self.normalize();
+		next
+	}
+}
+
+impl<T> DoubleEndedIterator for Interval<T>
+	where 
+		T: IntervalBounds + LeftIterable + RightIterable, 
+		Interval<T>: IntervalNormalize
+{
+	fn next_back(&mut self) -> Option<T> {
+		let next = self.0.next_back();
+		self.normalize();
+		next
+	}
+}
+
+impl<T> Iterator for RawInterval<T>
+	where T: IntervalBounds + LeftIterable
+{
+	type Item = T;
+	fn next(&mut self) -> Option<T> {
+		self.pop_lower()
+	}
+}
+
+impl<T> DoubleEndedIterator for RawInterval<T>
+	where T: IntervalBounds + LeftIterable + RightIterable, 
+		Interval<T>: IntervalNormalize
+{
+	fn next_back(&mut self) -> Option<T> {
+		self.pop_upper()
+	}
+}
+
+/// Provides methods needed to iterate over an interval from the left.
 pub trait LeftIterable: Clone {
+	/// Returns the next element after the given one.
 	fn succ(&self) -> Option<Self>;
+	/// Returns the minimum element. 
 	fn minimum() -> Self;
 }
 
+/// Provides methods needed to iterate over an interval from the right.
 pub trait RightIterable: Clone {
+	/// Returns the previous element before the given one.
 	fn pred(&self) -> Option<Self>;
+	/// Returns the maximum element.
 	fn maximum() -> Self;
 }
 
-impl<T> RawInterval<T> where T: PartialOrd + Ord + LeftIterable {
+impl<T> RawInterval<T>
+	where
+		T: IntervalBounds + LeftIterable,
+		Interval<T>: IntervalNormalize
+{
 	/// Removes and returns the lowest point in the interval.
 	pub fn pop_lower(&mut self) -> Option<T> {
 		let left = match &*self {
@@ -967,10 +1356,12 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + LeftIterable {
 		
 		if let Some(nl) = left {
 			*self = match *self { 
-				Empty => Empty,
-				_	  => RawInterval::new(
+				Point(_) => Empty,
+				Empty	 => unreachable!(),
+				_		 => RawInterval::new(
 					Some(Exclude(nl.clone())), 
-					self.upper_bound()),
+					self.upper_bound()
+				),
 			};
 			Some(nl)
 		} else {
@@ -980,7 +1371,11 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + LeftIterable {
 	}
 }
 
-impl<T> RawInterval<T> where T: PartialOrd + Ord + RightIterable {
+impl<T> RawInterval<T>
+	where
+		T: IntervalBounds + RightIterable,
+		Interval<T>: IntervalNormalize
+{
 	/// Removes and returns the greatest point in the interval.
 	pub fn pop_upper(&mut self) -> Option<T> {
 		let right = match &*self {
@@ -999,10 +1394,12 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + RightIterable {
 		
 		if let Some(nr) = right {
 			*self = match *self { 
-				Empty => Empty,
-				_	  => RawInterval::new(
+				Point(_) => Empty,
+				Empty    => unreachable!(),
+				_		 => RawInterval::new(
 					self.lower_bound(),
-					Some(Exclude(nr.clone()))),
+					Some(Exclude(nr.clone()))
+				),
 			};
 			Some(nr)
 		} else {
@@ -1016,16 +1413,20 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + RightIterable {
 ////////////////////////////////////////////////////////////////////////////////
 // IntervalNormalize
 ////////////////////////////////////////////////////////////////////////////////
+/// Provides normalization capabilities for an interval.
 pub trait IntervalNormalize: Sized {
-	fn normalized(self) -> Self {
-		self
+	/// Normalizes the interval.
+	fn normalize(&mut self);
+	/// Returns the normalized interval.
+	fn normalized(self) -> Self where Self: Clone {
+		let mut n = self.clone();
+		n.normalize();
+		n
 	}
 }
 
-impl<T> IntervalNormalize for Interval<T> where Interval<T>: Clone {
-    default fn normalized(self) -> Self {
-        self
-    }
+impl<T> IntervalNormalize for Interval<T> {
+    default fn normalize(&mut self) {}
 }
 
 
@@ -1042,7 +1443,7 @@ pub fn normalize_minimum<T>(interval: Interval<T>, min: T) -> Interval<T> {
 
 /// Normalizes an interval by clamping the upper bound to the given maximum
 /// value.
-pub fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T>  {
+pub fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T> {
 	Interval(match interval.0 {
 		From(l)		=> Closed(l, max),
 		UpFrom(l)	=> LeftOpen(l, max),
@@ -1080,12 +1481,13 @@ pub fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
 
 
 
-
 macro_rules! interval_bounds {
     ($t:ty ; $($rest:tt)*) => {
         impl IntervalNormalize for Interval<$t> {
-            fn normalized(self) -> Self {
-                normalize!($($rest)* self)
+            fn normalize(&mut self) {
+                let mut n = normalize!($($rest)* *self);
+                n.0.normalize();
+                *self = n;
             }
         }
         left_iterable_impl!($t; $($rest)*);
@@ -1405,5 +1807,20 @@ mod tests {
 			RawInterval::union_all(ints), 
 			vec![RawInterval::open(-1, 2)]
 		);
+	}
+
+
+	#[test]
+	fn raw_interval_iterate_1() {
+		let int = Interval::closed(8, 12);
+
+		assert_eq!(int.collect::<Vec<_>>(), vec![8, 9, 10, 11, 12]);
+	}
+
+	#[test]
+	fn raw_interval_iterate_2() {
+		let int = Interval::closed(8, 12);
+
+		assert_eq!(int.rev().collect::<Vec<_>>(), vec![12, 11, 10, 9, 8]);
 	}
 }
