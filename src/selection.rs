@@ -33,10 +33,7 @@ use interval::{Interval, IntervalBounds};
 // Standard imports.
 use std::collections::{btree_set, BTreeSet};
 use std::cmp::Ordering;
-
-// Local enum shortcuts.
-use Bound::*;
-use self::Tine::*;
+use std::fmt;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +65,6 @@ impl<T> Selection<T> where T: IntervalBounds {
 	/// Inserts all of the points in the given interval into the Selection.
 	pub fn union_insert(&mut self, interval: Interval<T>) {
 		self.disjunction_map.union_insert(interval);
-		println!("{:?}", self.disjunction_map);
 	}
 }
 
@@ -81,79 +77,91 @@ impl<T> Selection<T> where T: IntervalBounds {
 /// that the `BTreeSet` will always be able to split at the appropriate place
 /// for a given bound type.
 #[derive(Debug, PartialEq, Clone)]
-enum Tine<T> where T: IntervalBounds {
-	/// A lower bound.
-	Lo(Option<Bound<T>>),
-	/// A point interval.
-	Pt(Interval<T>),
-	/// An upper bound.
-	Hi(Option<Bound<T>>),
+struct Tine<T> {
+	pub lb: bool,
+	pub ub: bool,
+	pub incl: bool,
+	pub point: Option<T>,
 }
 
 impl<T> Tine<T> where T: IntervalBounds {
-	/// Returns whether the Tine represents a lower bound.
-	pub fn is_lo(&self) -> bool {
-		match self {
-			&Lo(_) => true,
-			_	   => false,
+	pub fn is_point(&self) -> bool {
+		!self.lb && !self.ub && self.incl && self.point.is_some()
+	}
+
+	pub fn from_degenerate_interval(interval: Interval<T>) -> Self {
+		debug_assert!(!interval.is_empty());
+		debug_assert!(interval.is_degenerate());
+		Tine {
+			lb: false,
+			ub: false,
+			incl: true,
+			point: interval.infimum(),
 		}
 	}
 
-	/// Returns whether the Tine represents an upper bound.
-	pub fn is_hi(&self) -> bool {
-		match self {
-			&Hi(_) => true,
-			_	   => false,
+	pub fn from_nondegenerate_interval(interval: Interval<T>) -> (Self, Self) {
+		debug_assert!(!interval.is_empty());
+		debug_assert!(!interval.is_degenerate());
+		let left = Tine {
+			lb: true,
+			ub: false,
+			incl: !interval.is_left_open(),
+			point: interval.infimum(),
+		};
+		let right = Tine {
+			lb: false,
+			ub: true,
+			incl: !interval.is_right_open(),
+			point: interval.supremum(),
+		};
+		println!("\nGenerating tines {:?} {}, {}", interval, &left, &right); //TODO: Remove.
+		(left, right)
+	}
+
+	pub fn merge(self, other: Self) -> Option<Self> {
+		debug_assert_eq!(self.point, other.point);
+		debug_assert!(self.point.is_some()
+			|| other.point.is_some() 
+			|| (self.point.is_none() 
+				&& other.point.is_none()
+				&& self.lb == other.lb 
+				&& self.ub == other.ub));
+
+		let merged = Tine {
+			lb: self.lb || other.lb,
+			ub: self.ub || other.ub,
+			incl: self.incl || other.incl,
+			point: self.point,
+		};
+
+		if merged.lb && merged.ub && merged.incl {
+			// New tine is merging 2 or more intervals.
+			None
+		} else {
+			Some(merged)
 		}
 	}
 
-	/// Returns the value of the bound.
-	pub fn val(&self) -> Option<T> {
-		match *self {
-			Pt(ref i)		=> i.infimum(),
-			Lo(Some(ref l)) => Some(l.as_ref().clone()),
-			Hi(Some(ref r)) => Some(r.as_ref().clone()),
-			_				=> None,
+	pub fn make_lower_bound(lb: Self) -> Option<Bound<T>> {
+		debug_assert!(lb.lb);
+		if lb.point.is_none() {
+			return None;
+		}
+		match lb.incl {
+			true => Some(Bound::Include(lb.point.expect("bounded tine"))),
+			false => Some(Bound::Exclude(lb.point.expect("bounded tine"))),
 		}
 	}
 
-	/// Converts open bounds to closed bounds.
-	pub fn close(self) -> Self {
-		match self {
-			Lo(Some(Exclude(l))) => Lo(Some(Include(l))),
-			Hi(Some(Exclude(r))) => Hi(Some(Include(r))),
-			_					 => self,
+	pub fn make_upper_bound(ub: Self) -> Option<Bound<T>> {
+		debug_assert!(ub.ub);
+		if ub.point.is_none() {
+			return None;
 		}
-
-	}
-	
-	/// Compares `Tine` types.
-	pub fn cmp_tine_types(&self, other: &Self) -> Ordering {
-		match (self, other) {
-			(&Lo(_), &Pt(_)) => Ordering::Less,
-			(&Lo(_), &Hi(_)) => Ordering::Less,
-			(&Pt(_), &Lo(_)) => Ordering::Greater,
-			(&Pt(_), &Hi(_)) => Ordering::Less,
-			(&Hi(_), &Lo(_)) => Ordering::Greater,
-			(&Hi(_), &Pt(_)) => Ordering::Greater,
-			_				 => Ordering::Equal,
-		}
-	}
-	
-	/// Compares `Bound` types.
-	pub fn cmp_bound_types(&self, other: &Self) -> Ordering {
-		match (self, other) {
-			(&Lo(Some(ref a)), &Lo(Some(ref b))) => match (a, b) {
-				(&Exclude(_), &Include(_)) => Ordering::Greater,
-				(&Include(_), &Exclude(_)) => Ordering::Less,
-				_						   => Ordering::Equal,
-			},
-			(&Hi(Some(ref a)), &Hi(Some(ref b))) => match (a, b) {
-				(&Exclude(_), &Include(_)) => Ordering::Less,
-				(&Include(_), &Exclude(_)) => Ordering::Greater,
-				_						   => Ordering::Equal,
-			},
-			_									 => Ordering::Equal,
+		match ub.incl {
+			true => Some(Bound::Include(ub.point.expect("bounded tine"))),
+			false => Some(Bound::Exclude(ub.point.expect("bounded tine"))),
 		}
 	}
 }
@@ -161,18 +169,6 @@ impl<T> Tine<T> where T: IntervalBounds {
 // Tine ordering is total.
 impl<T> Eq for Tine<T> where T: IntervalBounds {}
 
-
-// Tine comparison:
-// First check the points.
-// if any are null
-//     compare Lo < Pt < Hi
-// else
-//     compare values
-//     then compare Hi < Pt < Lo
-//     then if both are Lo
-//         compare Include < Exclude
-//     else if both are Hi
-//         compare Exclude < Include
 
 impl<T> PartialOrd for Tine<T> where T: IntervalBounds {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -182,23 +178,45 @@ impl<T> PartialOrd for Tine<T> where T: IntervalBounds {
 
 impl<T> Ord for Tine<T> where T: IntervalBounds {
 	fn cmp(&self, other: &Self) -> Ordering {
-		match (self.val(), other.val()) {
-			(Some(ref a), Some(ref b)) => {
-				let res = a.cmp(b);
-				let res = match res {
-					Ordering::Equal => self.cmp_tine_types(other).reverse(),
-					_				=> return res,
-				};
-				match res {
-					Ordering::Equal => self.cmp_bound_types(other),
-					_				=> res,
+		match (&self.point, &other.point) {
+			(&Some(ref a), &Some(ref b))
+				=> a.cmp(&b),
+
+			(&None, &Some(_))
+				=> if self.lb {Ordering::Less} else {Ordering::Greater},
+
+			(&Some(_), &None)
+				=> if other.lb {Ordering::Less} else {Ordering::Greater},
+
+			_
+				=> match (self.lb, self.ub, other.lb, other.ub) {
+					(true, false, true, false) |
+					(false, true, false, true) => Ordering::Equal,
+					(true, false, false, true) => Ordering::Less,
+					(false, true, true, false) => Ordering::Greater,
+					_						   => panic!("invalid Tine"),
 				}
-			},
-			_						   => self.cmp_tine_types(other).reverse(),
 		}
 	}
 }
 
+
+impl<T> fmt::Display for Tine<T> where T: fmt::Debug {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}-{:?}", 
+			match (self.lb, self.incl, self.ub) {
+				(true, false, false) => "(",
+				(true, true, false) => "[",
+				(true, true, true) => "!!",
+				(true, false, true) => ")(",
+				(false, false, true) => ")",
+				(false, true, true) => "]",
+				(false, true, false) => "|",
+				(false, false, false) => "??",
+			},
+			self.point)
+	}
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -226,67 +244,139 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds {
 		dm
 	}
 
-	#[allow(dead_code)]
 	pub fn union_insert(&mut self, interval: Interval<T>) {
+		if interval.is_empty() {
+			return
+		}
+
 		if interval.is_degenerate() {
-			self.union_pt(Pt(interval));
+			self.union_pt(Tine::from_degenerate_interval(interval));
 		} else {
-			self.union_normal(
-				Lo(interval.lower_bound()),
-				Hi(interval.upper_bound()),
-			);
+			let (lb, ub) = Tine::from_nondegenerate_interval(interval);
+			self.union_normal(lb, ub);
 		}
 	}
 
 	fn union_pt(&mut self, pt: Tine<T>) {
+		if self.tine_map.is_empty() {
+			self.tine_map.insert(pt);
+			return
+		}
+
 		let mut r_map = self.tine_map.split_off(&pt);
-		
 		let before = self.tine_map.iter().next_back().cloned();
 		let after = r_map.iter().next().cloned();
-		
-		match (&before.as_ref().map(Tine::is_lo), 
-			   &after.as_ref().map(Tine::is_hi))
-		{
-			(&Some(true), &Some(true)) => {
-				let before = before.unwrap();
-				let after = after.unwrap();
-				
-				if before.val() == pt.val() {
-					self.tine_map.remove(&before);
-					r_map.insert(before.close());
-				} else if after.val() == pt.val() {
-					r_map.remove(&after);
-					r_map.insert(after.close());
-				};
-				// Else do nothing: point is subsumed.
-			},
-			_						   => {r_map.insert(pt);},
-		}
-		
+
+		match (before, after) {
+			(_,		  Some(ref a)) if a.point == pt.point
+				=> if let Some(merged) = pt.merge(a.clone()) {
+					r_map.insert(merged);
+				} else {
+					r_map.remove(&a);
+				},
+			
+			(Some(ref b), Some(ref a)) if b.ub && a.lb
+				=> {r_map.insert(pt);},
+
+			(Some(ref b), _)
+				=> {r_map.insert(pt); debug_assert!(!b.lb);}
+
+			(_,		  Some(a))
+				=> {r_map.insert(pt); debug_assert!(!a.ub);}
+
+			_	=> (), // Nothing to do.
+		};
+
 		self.tine_map.extend(r_map);
 	}
 
 
 	fn union_normal(&mut self, lb: Tine<T>, ub: Tine<T>) {
-		let mut r_map = self.tine_map.split_off(&lb);
-		r_map = r_map.split_off(&ub);
-		println!("\t{:?}", self.tine_map);
-		println!("\t{:?}", r_map);
+		// Should have proper bounds set...
+		debug_assert!(lb.lb);
+		debug_assert!(ub.ub);
 
+		if self.tine_map.is_empty() 
+			|| (lb.point.is_none() && ub.point.is_none()) 
+		{
+			self.tine_map = BTreeSet::new();
+			self.tine_map.insert(lb);
+			self.tine_map.insert(ub);
+			return
+		}
+
+		let mut r_map = self.tine_map.split_off(&lb);
 		let before = self.tine_map.iter().next_back().cloned();
+
+		let lb = if let Some(a) = r_map.take(&lb) {
+			lb.merge(a)
+		} else {
+			Some(lb)
+		};
+
+		let mut r_map = r_map.split_off(&ub);
+
+		let ub = if let Some(a) = r_map.take(&ub) {
+			ub.merge(a)
+		} else {
+			Some(ub)
+		};
 		let after = r_map.iter().next().cloned();
 
-		
-		match (&before.as_ref().map(Tine::is_lo), 
-			   &after.as_ref().map(Tine::is_hi))
-		{
-			(&Some(true), &Some(true)) => (), // Do nothing: interval subsumed.
-			(_,			  &Some(true)) => {r_map.insert(lb);},
-			(&Some(true), _)		   => {r_map.insert(ub);},
-			_						   => {r_map.insert(lb); r_map.insert(ub);},
+		println!("Before...");//TODO: Remove.
+		for tine in self.tine_map.iter() { //TODO: Remove.
+    		println!("\t{}", tine); //TODO: Remove.
+    	} //TODO: Remove.
+
+    	println!("After...");//TODO: Remove.
+		for tine in r_map.iter() { //TODO: Remove.
+    		println!("\t{}", tine); //TODO: Remove.
+    	} //TODO: Remove.
+
+		match (lb, ub) {
+			(None, None) => {
+				println!("Double annhilation");
+				debug_assert!(before.expect("upper bound annhilation").lb);
+				debug_assert!(after.expect("lower bound annhilation").ub);
+			},
+			(Some(lb), None) => {
+				println!("Inserting lb\t{}", lb); //TODO: Remove.
+				r_map.insert(lb);
+				debug_assert!(after.expect("lower bound annhilation").ub);	
+			},
+
+			(None, Some(ub)) => {
+				println!("Inserting ub\t{}", ub); //TODO: Remove.
+				r_map.insert(ub);
+				debug_assert!(before.expect("upper bound annhilation").lb);
+			},
+
+			(Some(lb), Some(ub)) => {
+				println!("No annhilation");
+				if before.is_none() 
+					|| before.as_ref().map(|b| b.ub) == Some(true)
+					|| (before.map(|b| b.lb) == Some(true) && lb.ub)
+
+				{
+					println!("Inserting lb/ub\t{}", lb); //TODO: Remove.
+					r_map.insert(lb);
+				}
+				if after.is_none() 
+					|| after.as_ref().map(|a| a.lb) == Some(true) 
+					|| (after.map(|a| a.ub) == Some(true)  && ub.lb)
+				{
+					println!("Inserting lb/ub\t{}", ub); //TODO: Remove.
+					r_map.insert(ub);
+				}
+
+			}
 		}
-		
+		println!("Done."); //TODO: Remove.
+
 		self.tine_map.extend(r_map);
+		for tine in self.tine_map.iter() { //TODO: Remove.
+    		println!("\t{}", tine); //TODO: Remove.
+    	} //TODO: Remove.
 	}
 }
 
@@ -296,6 +386,7 @@ impl<T> IntoIterator for DisjunctionMap<T> where T: IntervalBounds {
     fn into_iter(self) -> Self::IntoIter {
     	SelectionIter {
     		tine_iter: self.tine_map.into_iter(),
+    		saved: None,
     	}
     }
 }
@@ -306,20 +397,39 @@ impl<T> IntoIterator for DisjunctionMap<T> where T: IntervalBounds {
 /// An iterator over the intervals in 
 pub struct SelectionIter<T> where T: IntervalBounds {
 	tine_iter: btree_set::IntoIter<Tine<T>>,
+	saved: Option<Tine<T>>,
 }
 
 impl<T> Iterator for SelectionIter<T> where T: IntervalBounds {
 	type Item = Interval<T>;
+
 	fn next(&mut self) -> Option<Self::Item> {
-		match self.tine_iter.next() {
-			Some(Pt(int)) => Some(int),
-			Some(Lo(l))	  => if let Some(Hi(r)) = self.tine_iter.next() {
-				Some(Interval::new(l, r))
-			} else {
-				panic!("disjunction map in invalid order")
-			},
-			None		  => None,
-			_	  => panic!("disjunction map in invalid order"),
+		if let Some(saved) = self.saved.take() {
+			debug_assert!(saved.lb);
+			let second = self.tine_iter.next().expect("");
+			debug_assert!(second.ub);
+			if second.lb {self.saved = Some(second.clone());}
+
+			return Some(Interval::new(
+				Tine::make_lower_bound(saved),
+				Tine::make_upper_bound(second)));
+
+		}
+		
+		if let Some(first) = self.tine_iter.next() {
+			debug_assert!(!first.ub);
+
+			if first.is_point() {
+				return Some(Interval::point(first.point.expect("point tine")));
+			}
+			let second = self.tine_iter.next().expect("upper bound");
+			if second.lb {self.saved = Some(second.clone());}
+
+			Some(Interval::new(
+				Tine::make_lower_bound(first),
+				Tine::make_upper_bound(second)))
+		} else {
+			None
 		}
 	}
 }
@@ -380,20 +490,20 @@ mod tests {
 		assert_eq!(dm_res, vec![a, b, c]);
 	}
 
-	// #[test]
-	// fn disjunction_map_insert_overlap_close() {
-	// 	let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+	#[test]
+	fn disjunction_map_insert_overlap_close() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
-	// 	let a = Interval::open(Opaque(0), Opaque(15));
-	// 	let b = Interval::closed(Opaque(15), Opaque(25));
-	// 	let c = Interval::open(Opaque(25), Opaque(30));
-	// 	dm.union_insert(c.clone());
-	// 	dm.union_insert(a.clone());
-	// 	dm.union_insert(b.clone());
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::closed(Opaque(15), Opaque(25));
+		let c = Interval::open(Opaque(25), Opaque(30));
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
 
-	// 	let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-	// 	assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
-	// }
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
+	}
 
 	#[test]
 	fn disjunction_map_insert_disjoint_point() {

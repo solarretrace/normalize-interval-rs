@@ -255,7 +255,7 @@ impl<T> BoundOps for Option<Bound<T>> where T: PartialOrd + PartialEq + Clone {
 ////////////////////////////////////////////////////////////////////////////////
 // Miscellaneous trait impls.
 ////////////////////////////////////////////////////////////////////////////////
-// Default bound is closed.
+// Default `Bound` is closed.
 impl<T> Default for Bound<T> where T: Default {
     #[inline]
     fn default() -> Self {
@@ -263,7 +263,7 @@ impl<T> Default for Bound<T> where T: Default {
     }
 }
 
-// Bound-from-Point conversion.
+// `Bound`-from-`Point` conversion.
 impl<T> From<T> for Bound<T> {
     #[inline]
     fn from(t: T) -> Self {

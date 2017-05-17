@@ -72,7 +72,7 @@ pub trait SelectionElement where Self: Sized + IntervalBounds {
 			}
 			Some((p, _)) => Err(ParseError::UnexpectedSymbol {
 				expected: "'-'",
-				found: &text[p..]
+				found: &text[p..],
 			}),
 			None => Err(ParseError::UnexpectedEndOfStream),
 		}
@@ -136,7 +136,6 @@ impl<T> Selection<T> where T: SelectionElement + IntervalNormalize {
 	pub fn parse(text: &str) -> Result<Self, ParseError> {
 		consume(Self::parse_selection, &mut &*text)
 	}
-
 
 	/// Parses a prefix of the given string into a `Selection`, shifting the 
 	/// input reference to the remainder of the unparsed portion of the string.
@@ -207,7 +206,7 @@ pub fn parse_whitespace<'t>(mut text: &mut &'t str)
 		}
 		Some((p, _)) => Err(ParseError::UnexpectedSymbol {
 			expected: "whitespace",
-			found: &text[p..]
+			found: &text[p..],
 		}),
 		None => Err(ParseError::UnexpectedEndOfStream),
 	}

@@ -473,6 +473,67 @@ impl<T> Interval<T> where T: IntervalBounds {
 			_				=> false,
 		}
 	}
+
+
+	/// Returns whether the interval excludes its left boundary point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::left_open(Opaque(15), Opaque(30));
+	/// let b = Interval::open(Opaque(15), Opaque(30));
+	/// let c = Interval::right_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert!(a.is_left_open());
+	/// assert!(b.is_left_open());
+	/// assert!(!c.is_left_open());
+	/// ```
+	pub fn is_left_open(&self) -> bool {
+		match self.0 {
+			Open(_, _)		=> true,
+			LeftOpen(_, _)	=> true,
+			UpFrom(_)		=> true,
+			To(_)			=> true,
+			Full			=> true,
+			_				=> false,
+		}
+	}
+
+
+	/// Returns whether the interval excludes its right boundary point.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	/// 
+	/// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+	/// struct Opaque(i32);
+	///
+	/// let a = Interval::left_open(Opaque(15), Opaque(30));
+	/// let b = Interval::open(Opaque(15), Opaque(30));
+	/// let c = Interval::right_open(Opaque(15), Opaque(30));
+	/// 
+	/// assert!(!a.is_right_open());
+	/// assert!(b.is_right_open());
+	/// assert!(c.is_right_open());
+	/// ```
+	pub fn is_right_open(&self) -> bool {
+		match self.0 {
+			Open(_, _)		=> true,
+			RightOpen(_, _)	=> true,
+			UpTo(_)			=> true,
+			From(_)			=> true,
+			Full			=> true,
+			_				=> false,
+		}
+	}
+
 	
 	/// Returns whether the interval includes all of its boundary points.
 	///
@@ -954,16 +1015,16 @@ enum RawInterval<T> {
 	Empty,
 	/// An interval containing only the given point.
 	Point(T),
-	/// An interval containing all points between two given points, exclude
+	/// An interval containing all points between two given points, excluding
 	/// them both.
 	Open(T, T),
-	/// An interval containing all points between two given points, include
+	/// An interval containing all points between two given points, including
 	/// the greater of the two.
 	LeftOpen(T, T),
-	/// An interval containing all points between two given points, include
+	/// An interval containing all points between two given points, including
 	/// the lesser of the two.
 	RightOpen(T, T),
-	/// An interval containing all points between two given points, include
+	/// An interval containing all points between two given points, including
 	/// them both.
 	Closed(T, T),
 	/// An interval containing all points less than the given point.
@@ -1193,7 +1254,6 @@ impl<T> RawInterval<T> where T: IntervalBounds {
 			Full					=> vec![], // Or vec![Empty]?
 		}
 	}
-
 
 	/// Returns the intersection of all of the given intervals.
 	pub fn intersect_all<I>(intervals: I) -> Self
