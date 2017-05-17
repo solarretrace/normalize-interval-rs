@@ -186,7 +186,7 @@ impl<T> Ord for Tine<T> where T: IntervalBounds {
 				=> if self.lb {Ordering::Less} else {Ordering::Greater},
 
 			(&Some(_), &None)
-				=> if other.lb {Ordering::Less} else {Ordering::Greater},
+				=> if other.lb {Ordering::Greater} else {Ordering::Less},
 
 			_
 				=> match (self.lb, self.ub, other.lb, other.ub) {
@@ -268,7 +268,7 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds {
 		let after = r_map.iter().next().cloned();
 
 		match (before, after) {
-			(_,		  Some(ref a)) if a.point == pt.point
+			(_,			  Some(ref a)) if a.point == pt.point
 				=> if let Some(merged) = pt.merge(a.clone()) {
 					r_map.insert(merged);
 				} else {
@@ -278,10 +278,13 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds {
 			(Some(ref b), Some(ref a)) if b.ub && a.lb
 				=> {r_map.insert(pt);},
 
-			(Some(ref b), _)
+			(Some(_),	  Some(_))
+				=> (), // Point is subsumed; do nothing.
+
+			(Some(ref b), None)
 				=> {r_map.insert(pt); debug_assert!(!b.lb);}
 
-			(_,		  Some(a))
+			(None,		  Some(a))
 				=> {r_map.insert(pt); debug_assert!(!a.ub);}
 
 			_	=> (), // Nothing to do.
@@ -518,5 +521,60 @@ mod tests {
 
 		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
 		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_exact() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(15), Opaque(25));
+		let c = Interval::open(Opaque(0), Opaque(25));
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_widen() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(15));
+		let b = Interval::open(Opaque(15), Opaque(25));
+		let c = Interval::closed(Opaque(0), Opaque(25));
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::closed(Opaque(0), Opaque(25))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_point() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::open(Opaque(0), Opaque(30));
+		let b = Interval::point(Opaque(15));
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
+	}
+	#[test]
+	fn disjunction_map_insert_overlap_unbounded() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::from(Opaque(10));
+		let b = Interval::open(Opaque(15), Opaque(30));
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::from(Opaque(10))]);
 	}
 }
