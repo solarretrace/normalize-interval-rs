@@ -33,9 +33,9 @@ mod bound;
 #[warn(missing_docs)]
 mod interval;
 #[warn(missing_docs)]
-mod selection;
-#[warn(missing_docs)]
 mod parse;
+#[warn(missing_docs)]
+mod selection;
 
 
 

@@ -28,12 +28,20 @@
 
 // Local imports.
 use bound::Bound;
-use interval::{Interval, IntervalBounds};
+use interval::{
+	Interval,
+	IntervalBounds,
+	IntervalNormalize,
+	LeftIterable,
+	RightIterable,
+};
 
 // Standard imports.
-use std::collections::{btree_set, BTreeSet};
+use std::collections::btree_set;
+use std::collections::BTreeSet;
 use std::cmp::Ordering;
 use std::fmt;
+use std::mem;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,6 +72,7 @@ impl<T> Selection<T> where T: IntervalBounds {
 
 	/// Inserts all of the points in the given interval into the Selection.
 	pub fn union_insert(&mut self, interval: Interval<T>) {
+
 		self.disjunction_map.union_insert(interval);
 	}
 }
@@ -76,12 +85,19 @@ impl<T> Selection<T> where T: IntervalBounds {
 /// Tines are used to implement ordering over the interval bounds in such a way
 /// that the `BTreeSet` will always be able to split at the appropriate place
 /// for a given bound type.
+///
+/// Tines representing point intervals are neither upper bounds nor lower
+/// bounds.
 #[derive(Debug, PartialEq, Clone)]
 struct Tine<T> {
-	pub lb: bool,
-	pub ub: bool,
-	pub incl: bool,
+	/// The point of the `Tine`.
 	pub point: Option<T>,
+	/// Whether the `Tine` represents the upper bound of an interval.
+	pub lb: bool,
+	/// Whether the `Tine` represents the lower bound of an interval.
+	pub ub: bool,
+	/// Whether the `Tine` point is included in the interval.
+	pub incl: bool,
 }
 
 impl<T> Tine<T> where T: IntervalBounds {
@@ -89,31 +105,44 @@ impl<T> Tine<T> where T: IntervalBounds {
 		!self.lb && !self.ub && self.incl && self.point.is_some()
 	}
 
-	pub fn from_degenerate_interval(interval: Interval<T>) -> Self {
-		debug_assert!(!interval.is_empty());
-		debug_assert!(interval.is_degenerate());
-		Tine {
-			lb: false,
-			ub: false,
-			incl: true,
-			point: interval.infimum(),
+	pub fn from_interval(interval: Interval<T>) -> OptionSplit<Self> {
+		if interval.is_degenerate() {
+			OptionSplit::One(Self::from_degenerate_interval(interval))
+		} else {
+			let (lb, ub) = Self::from_nondegenerate_interval(interval);
+			OptionSplit::Two(lb, ub)
 		}
 	}
 
-	pub fn from_nondegenerate_interval(interval: Interval<T>) -> (Self, Self) {
+	pub fn from_degenerate_interval(mut interval: Interval<T>) -> Self {
+		interval.normalize();
+		debug_assert!(!interval.is_empty());
+		debug_assert!(interval.is_degenerate());
+		Tine {
+			point: interval.infimum(),
+			lb: false,
+			ub: false,
+			incl: true,
+		}
+	}
+
+	pub fn from_nondegenerate_interval(mut interval: Interval<T>)
+		-> (Self, Self)
+	{
+		interval.normalize();
 		debug_assert!(!interval.is_empty());
 		debug_assert!(!interval.is_degenerate());
 		let left = Tine {
+			point: interval.infimum(),
 			lb: true,
 			ub: false,
 			incl: !interval.is_left_open(),
-			point: interval.infimum(),
 		};
 		let right = Tine {
+			point: interval.supremum(),
 			lb: false,
 			ub: true,
 			incl: !interval.is_right_open(),
-			point: interval.supremum(),
 		};
 		println!("\nGenerating tines {:?} {}, {}", interval, &left, &right); //TODO: Remove.
 		(left, right)
@@ -166,9 +195,8 @@ impl<T> Tine<T> where T: IntervalBounds {
 	}
 }
 
-// Tine ordering is total.
-impl<T> Eq for Tine<T> where T: IntervalBounds {}
 
+impl<T> Eq for Tine<T> where T: IntervalBounds {}
 
 impl<T> PartialOrd for Tine<T> where T: IntervalBounds {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -176,6 +204,7 @@ impl<T> PartialOrd for Tine<T> where T: IntervalBounds {
 	}
 }
 
+// Tine ordering is total.
 impl<T> Ord for Tine<T> where T: IntervalBounds {
 	fn cmp(&self, other: &Self) -> Ordering {
 		match (&self.point, &other.point) {
@@ -205,19 +234,79 @@ impl<T> fmt::Display for Tine<T> where T: fmt::Debug {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "{}-{:?}", 
 			match (self.lb, self.incl, self.ub) {
-				(true, false, false) => "(",
-				(true, true, false) => "[",
-				(true, true, true) => "!!",
-				(true, false, true) => ")(",
-				(false, false, true) => ")",
-				(false, true, true) => "]",
-				(false, true, false) => "|",
+				(true, false, false)  => "(",
+				(true, true, false)	  => "[",
+				(true, true, true)	  => "[]",
+				(true, false, true)	  => ")(",
+				(false, false, true)  => ")",
+				(false, true, true)	  => "]",
+				(false, true, false)  => "|",
 				(false, false, false) => "??",
 			},
 			self.point)
 	}
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Unification traits
+////////////////////////////////////////////////////////////////////////////////
+pub trait LeftUnify: Sized {
+	fn next_lower(&self) -> Option<Self>;
+}
+
+pub trait RightUnify: Sized {
+	fn next_upper(&self) -> Option<Self>;
+}
+
+impl<T> LeftUnify for T {
+	default fn next_lower(&self) -> Option<Self> {None}
+}
+
+impl<T> RightUnify for T {
+	default fn next_upper(&self) -> Option<Self> {None}
+}
+
+impl<T> LeftUnify for T where T: RightIterable {
+	 fn next_lower(&self) -> Option<Self> {
+	 	self.pred()
+	 }
+}
+
+impl<T> RightUnify for T where T: LeftIterable {
+	 fn next_upper(&self) -> Option<Self> {
+	 	self.succ()
+	 }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// OptionSplit
+////////////////////////////////////////////////////////////////////////////////
+pub enum OptionSplit<T> {
+	None,
+	One(T),
+	Two(T, T),
+}
+
+impl<T> OptionSplit<T> {
+	pub fn append(&mut self, t: T) {
+		let cur = mem::replace(self, OptionSplit::None);
+		*self = match cur {
+			OptionSplit::None	   => OptionSplit::One(t),
+			OptionSplit::One(fst)  => OptionSplit::Two(fst, t),
+			OptionSplit::Two(_, _) => panic!("OptionSplit is full"),
+
+		}
+	}
+
+	pub fn join_eq(self) -> OptionSplit<T> where T: Eq {
+		use OptionSplit::*;
+		match self {
+			Two(a, b) => if a == b {One(a)} else {Two(a, b)},
+			_		  => self
+		}
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DisjunctionMap
@@ -227,7 +316,7 @@ struct DisjunctionMap<T> where T: IntervalBounds {
 	tine_map: BTreeSet<Tine<T>>,
 }
 
-impl<T> DisjunctionMap<T> where T: IntervalBounds {
+impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 	pub fn new() -> Self {
 		DisjunctionMap {
 			tine_map: BTreeSet::new(),
@@ -244,17 +333,81 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds {
 		dm
 	}
 
+
 	pub fn union_insert(&mut self, interval: Interval<T>) {
 		if interval.is_empty() {
 			return
 		}
 
-		if interval.is_degenerate() {
-			self.union_pt(Tine::from_degenerate_interval(interval));
-		} else {
-			let (lb, ub) = Tine::from_nondegenerate_interval(interval);
-			self.union_normal(lb, ub);
+
+		let tine_set = Tine::from_interval(interval);
+
+		let unified_tines = self.unify(tine_set);
+
+		match unified_tines {
+			OptionSplit::None		 => unreachable!(),
+			OptionSplit::One(pt)	 => self.union_pt(pt),
+			OptionSplit::Two(lb, ub) => self.union_normal(lb, ub),
+
 		}
+	}
+
+	fn contains_pt(&self, point: &T) -> bool {
+
+		let lb = Tine {
+			point: Some(point.clone()),
+			lb: true,
+			ub: false,
+			incl: true,
+		};
+		if self.tine_map.contains(&lb) {return true}
+
+		let ub = Tine {
+			point: Some(point.clone()),
+			lb: false,
+			ub: true,
+			incl: true,
+		};
+		if self.tine_map.contains(&ub) {return true}
+
+		let pt = Tine {
+			point: Some(point.clone()),
+			lb: false,
+			ub: false,
+			incl: true,
+		};
+		self.tine_map.contains(&pt)
+	}
+
+	fn unify(&self, tines: OptionSplit<Tine<T>>) -> OptionSplit<Tine<T>> {
+		use OptionSplit::*;
+		match tines {
+			None		=> None,
+			One(pt)		=> Two(self.unify_l(pt.clone()), self.unify_r(pt)).join_eq(), 
+			Two(lb, ub) => Two(self.unify_l(lb), self.unify_r(ub)),
+		}
+	}
+
+	fn unify_l(&self, mut t: Tine<T>) -> Tine<T> {
+		while let Some(lb) = t.point.clone().and_then(|pt| pt.next_lower()) {
+			if self.contains_pt(&lb) {
+				t.point = Some(lb);
+			} else {
+				break
+			}
+		}
+		t
+	}
+
+	fn unify_r(&self, mut t: Tine<T>) -> Tine<T> {
+		while let Some(ub) = t.point.clone().and_then(|pt| pt.next_upper()) {
+			if self.contains_pt(&ub) {
+				t.point = Some(ub);
+			} else {
+				break
+			}
+		}
+		t
 	}
 
 	fn union_pt(&mut self, pt: Tine<T>) {
@@ -463,6 +616,21 @@ mod tests {
 	}
 
 	#[test]
+	fn disjunction_map_insert_disjoint_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(20, 25);
+		let c = Interval::open(30, 35);
+		dm.union_insert(b.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![a, b, c]);
+	}
+
+	#[test]
 	fn disjunction_map_insert_overlap() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
@@ -477,6 +645,20 @@ mod tests {
 		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(26))]);
 	}
 
+	#[test]
+	fn disjunction_map_insert_overlap_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(20, 25);
+		let c = Interval::open(14, 26);
+		dm.union_insert(b.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(0, 26)]);
+	}
 
 	#[test]
 	fn disjunction_map_insert_disjoint_close() {
@@ -565,6 +747,7 @@ mod tests {
 		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
 		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
 	}
+
 	#[test]
 	fn disjunction_map_insert_overlap_unbounded() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();

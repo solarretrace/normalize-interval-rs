@@ -990,6 +990,25 @@ impl<T> Interval<T> where T: IntervalBounds {
 }
 
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Basic Trait impls
+////////////////////////////////////////////////////////////////////////////////
+// Interval-from-Point conversion.
+impl<T> From<T> for Interval<T> where T: IntervalBounds {
+	#[inline]
+	fn from(t: T) -> Self {
+		Interval(Point(t))
+	}
+}
+
+impl<T> PartialEq for Interval<T> where T: IntervalBounds {
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
+	}
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // RawInterval<T>
 ////////////////////////////////////////////////////////////////////////////////
@@ -1296,102 +1315,6 @@ impl<T> RawInterval<T> where T: IntervalBounds {
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Basic Trait impls
-////////////////////////////////////////////////////////////////////////////////
-// Display using interval notation.
-impl<T> fmt::Display for RawInterval<T> where T: IntervalBounds + fmt::Display {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		match self {
-			&Empty					 => write!(f, "Ø"),
-			&Point(ref p)			 => write!(f, "{}", p),
-			&Open(ref l, ref r)		 => write!(f, "({}, {})", l, r),
-			&LeftOpen(ref l, ref r)	 => write!(f, "({}, {}]", l, r),
-			&RightOpen(ref l, ref r) => write!(f, "[{}, {})", l, r),
-			&Closed(ref l, ref r)	 => write!(f, "[{}, {}]", l, r),
-			&UpTo(ref p)			 => write!(f, "(-∞, {})", p),
-			&UpFrom(ref p)			 => write!(f, "({}, ∞)", p),
-			&To(ref p)				 => write!(f, "(-∞, {})", p),
-			&From(ref p)			 => write!(f, "({}, ∞)", p),
-			&Full					 => write!(f, "(-∞, ∞)"),
-		}
-	}
-}
-
-// Interval-from-Point conversion.
-impl<T> From<T> for Interval<T> where T: IntervalBounds {
-	#[inline]
-	fn from(t: T) -> Self {
-		Interval(Point(t))
-	}
-}
-
-impl<T> PartialEq for Interval<T> where T: IntervalBounds {
-	fn eq(&self, other: &Self) -> bool {
-		self.0 == other.0
-	}
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Iterable traits
-////////////////////////////////////////////////////////////////////////////////
-impl<T> Iterator for Interval<T>
-	where T: IntervalBounds + LeftIterable, Interval<T>: IntervalNormalize
-{
-	type Item = T;
-	fn next(&mut self) -> Option<T> {
-		let next = self.0.next();
-		self.normalize();
-		next
-	}
-}
-
-impl<T> DoubleEndedIterator for Interval<T>
-	where 
-		T: IntervalBounds + LeftIterable + RightIterable, 
-		Interval<T>: IntervalNormalize
-{
-	fn next_back(&mut self) -> Option<T> {
-		let next = self.0.next_back();
-		self.normalize();
-		next
-	}
-}
-
-impl<T> Iterator for RawInterval<T>
-	where T: IntervalBounds + LeftIterable
-{
-	type Item = T;
-	fn next(&mut self) -> Option<T> {
-		self.pop_lower()
-	}
-}
-
-impl<T> DoubleEndedIterator for RawInterval<T>
-	where T: IntervalBounds + LeftIterable + RightIterable, 
-		Interval<T>: IntervalNormalize
-{
-	fn next_back(&mut self) -> Option<T> {
-		self.pop_upper()
-	}
-}
-
-/// Provides methods needed to iterate over an interval from the left.
-pub trait LeftIterable: Clone {
-	/// Returns the next element after the given one.
-	fn succ(&self) -> Option<Self>;
-	/// Returns the minimum element. 
-	fn minimum() -> Self;
-}
-
-/// Provides methods needed to iterate over an interval from the right.
-pub trait RightIterable: Clone {
-	/// Returns the previous element before the given one.
-	fn pred(&self) -> Option<Self>;
-	/// Returns the maximum element.
-	fn maximum() -> Self;
-}
 
 impl<T> RawInterval<T>
 	where
@@ -1470,13 +1393,120 @@ impl<T> RawInterval<T>
 }
 
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Basic Trait impls
+////////////////////////////////////////////////////////////////////////////////
+// Display using interval notation.
+impl<T> fmt::Display for RawInterval<T> where T: IntervalBounds + fmt::Display {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match self {
+			&Empty					 => write!(f, "Ø"),
+			&Point(ref p)			 => write!(f, "{}", p),
+			&Open(ref l, ref r)		 => write!(f, "({}, {})", l, r),
+			&LeftOpen(ref l, ref r)	 => write!(f, "({}, {}]", l, r),
+			&RightOpen(ref l, ref r) => write!(f, "[{}, {})", l, r),
+			&Closed(ref l, ref r)	 => write!(f, "[{}, {}]", l, r),
+			&UpTo(ref p)			 => write!(f, "(-∞, {})", p),
+			&UpFrom(ref p)			 => write!(f, "({}, ∞)", p),
+			&To(ref p)				 => write!(f, "(-∞, {})", p),
+			&From(ref p)			 => write!(f, "({}, ∞)", p),
+			&Full					 => write!(f, "(-∞, ∞)"),
+		}
+	}
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Iterator impls for Interval
+////////////////////////////////////////////////////////////////////////////////
+impl<T> Iterator for Interval<T>
+	where T: IntervalBounds + LeftIterable, Interval<T>: IntervalNormalize
+{
+	type Item = T;
+	fn next(&mut self) -> Option<T> {
+		let next = self.0.next();
+		self.normalize();
+		next
+	}
+}
+
+impl<T> DoubleEndedIterator for Interval<T>
+	where 
+		T: IntervalBounds + LeftIterable + RightIterable, 
+		Interval<T>: IntervalNormalize
+{
+	fn next_back(&mut self) -> Option<T> {
+		let next = self.0.next_back();
+		self.normalize();
+		next
+	}
+}
+
+// TODO: ExactSizeIterator
+
+////////////////////////////////////////////////////////////////////////////////
+// Iterator impls for RawInterval
+////////////////////////////////////////////////////////////////////////////////
+impl<T> Iterator for RawInterval<T>
+	where T: IntervalBounds + LeftIterable
+{
+	type Item = T;
+	fn next(&mut self) -> Option<T> {
+		self.pop_lower()
+	}
+}
+
+impl<T> DoubleEndedIterator for RawInterval<T>
+	where T: IntervalBounds + LeftIterable + RightIterable, 
+		Interval<T>: IntervalNormalize
+{
+	fn next_back(&mut self) -> Option<T> {
+		self.pop_upper()
+	}
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// LeftIterable
+////////////////////////////////////////////////////////////////////////////////
+/// Provides methods needed to iterate over an interval from the left.
+pub trait LeftIterable: Clone {
+	/// Returns the next element after the given one.
+	fn succ(&self) -> Option<Self>;
+
+	/// Returns the minimum element. 
+	fn minimum() -> Self;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// RightIterable
+////////////////////////////////////////////////////////////////////////////////
+/// Provides methods needed to iterate over an interval from the right.
+pub trait RightIterable: Clone {
+	/// Returns the previous element before the given one.
+	fn pred(&self) -> Option<Self>;
+
+	/// Returns the maximum element.
+	fn maximum() -> Self;
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // IntervalNormalize
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides normalization capabilities for an interval.
 pub trait IntervalNormalize: Sized {
+	type Point: IntervalBounds;
+
 	/// Normalizes the interval.
 	fn normalize(&mut self);
+
 	/// Returns the normalized interval.
 	fn normalized(self) -> Self where Self: Clone {
 		let mut n = self.clone();
@@ -1485,14 +1515,16 @@ pub trait IntervalNormalize: Sized {
 	}
 }
 
-impl<T> IntervalNormalize for Interval<T> {
-    default fn normalize(&mut self) {}
+// Blanket implementation for all `Interval`s.
+impl<T> IntervalNormalize for Interval<T> where T: IntervalBounds {
+	type Point = T;
+    default fn normalize(&mut self) {/* Do nothing. */}
 }
 
 
 /// Normalizes the an interval by clamping the lower bound to the given minimum
 /// value.
-pub fn normalize_minimum<T>(interval: Interval<T>, min: T) -> Interval<T> {
+fn normalize_minimum<T>(interval: Interval<T>, min: T) -> Interval<T> {
 	Interval(match interval.0 {
 		To(r)	=> Closed(min, r),
 		UpTo(r)	=> RightOpen(min, r),
@@ -1503,7 +1535,7 @@ pub fn normalize_minimum<T>(interval: Interval<T>, min: T) -> Interval<T> {
 
 /// Normalizes an interval by clamping the upper bound to the given maximum
 /// value.
-pub fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T> {
+fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T> {
 	Interval(match interval.0 {
 		From(l)		=> Closed(l, max),
 		UpFrom(l)	=> LeftOpen(l, max),
@@ -1514,7 +1546,7 @@ pub fn normalize_maximum<T>(interval: Interval<T>, max: T) -> Interval<T> {
 
 /// Normalizes an interval by converting left-open boundaries to closed
 /// boundaries.
-pub fn normalize_succ<T, F>(interval: Interval<T>, succ: F) -> Interval<T>
+fn normalize_succ<T, F>(interval: Interval<T>, succ: F) -> Interval<T>
 	where F: Fn(T) -> Option<T>  
 {
 	Interval(match interval.0 {
@@ -1527,7 +1559,7 @@ pub fn normalize_succ<T, F>(interval: Interval<T>, succ: F) -> Interval<T>
 
 /// Normalizes an interval by converting right-open boundaries to closed
 /// boundaries.
-pub fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
+fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
 	where F: Fn(T) -> Option<T>
 {
 	Interval(match interval.0 {
@@ -1540,23 +1572,10 @@ pub fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
 
 
 
-
-macro_rules! interval_bounds {
-    ($t:ty ; $($rest:tt)*) => {
-        impl IntervalNormalize for Interval<$t> {
-            fn normalize(&mut self) {
-                let mut n = normalize!($($rest)* *self);
-                n.0.normalize();
-                *self = n;
-            }
-        }
-        left_iterable_impl!($t; $($rest)*);
-        right_iterable_impl!($t; $($rest)*);
-    }
-}
-
-
+// Recursively matches 'expr = expr' statements until it finds the `succ =` and 
+// `minimum =` statements.
 macro_rules! left_iterable_impl {
+	// Finished search, provide LeftIterable implementation.
 	($t:ty ; found $min:expr ; found $succ:expr) => {
 		impl LeftIterable for $t {
 			fn succ(&self) -> Option<Self> {
@@ -1567,31 +1586,48 @@ macro_rules! left_iterable_impl {
 			}
 		}
 	};
+
+	// We've found succ and now minimum. Put them in order and finish.
 	($t:ty ; hold ; found $succ:expr ; minimum = $min:expr , $($rest:tt)*) => {
 		left_iterable_impl!($t; found $min; found $succ);
 	};
+
+	// We've found minimum and now succ. Put them in order and finish.
 	($t:ty ; found $min:expr ; hold ; succ = $succ:expr , $($rest:tt)* ) => {
 		left_iterable_impl!($t; found $min; found $succ);
 	};
+
+	// We've found succ, but not minimum. Continue search.
 	($t:ty ; hold ; found $succ:expr ; $i:ident = $e:expr , $($rest:tt)*) => {
 		left_iterable_impl!($t; hold; found $succ; $($rest)*);
 	};
+
+	// We've found minimum, but not succ. Continue search.
 	($t:ty ; found $min:expr ; hold ; $i:ident = $e:expr , $($rest:tt)* ) => {
 		left_iterable_impl!($t; found $min; hold; $($rest)*);
 	};
+
+	// We've just found minimum, mark it found and continue search for succ.
 	($t:ty ; minimum = $min:expr , $($rest:tt)*) => {
 		left_iterable_impl!($t; found $min; hold; $($rest)*);
 	};
+
+	// We've just found succ, mark it found and continue search for minimum.
 	($t:ty ; succ = $succ:expr , $($rest:tt)*) => {
 		left_iterable_impl!($t; hold; $succ; $($rest)*);
 	};
+
+	// We've found nothing. Continue search.
 	($t:ty ; $i:ident = $e:expr , $($rest:tt)*) => {
 		left_iterable_impl!($t; $($rest)*);
 	};
 }
 
 
+// Recursively matches 'expr = expr' statements until it finds the `pred =` and 
+// `maximum =` statements.
 macro_rules! right_iterable_impl {
+	// Finished search, provide RightIterable implementation.
 	($t:ty ; found $max:expr ; found $pred:expr) => {
 		impl RightIterable for $t {
 			fn pred(&self) -> Option<Self> {
@@ -1602,24 +1638,38 @@ macro_rules! right_iterable_impl {
 			}
 		}
 	};
+
+	// We've found pred and now maximum. Put them in order and finish.
 	($t:ty ; hold ; found $pred:expr ; maximum = $max:expr , $($rest:tt)*) => {
 		right_iterable_impl!($t; found $max; found $pred);
 	};
+
+	// We've found maximum and now pred. Put them in order and finish.
 	($t:ty ; found $max:expr ; hold ; pred = $pred:expr , $($rest:tt)* ) => {
 		right_iterable_impl!($t; found $max; found $pred);
 	};
+
+	// We've found pred, but not maximum. Continue search.
 	($t:ty ; hold ; found $pred:expr ; $i:ident = $e:expr , $($rest:tt)*) => {
 		right_iterable_impl!($t; hold; found $pred; $($rest)*);
 	};
+
+	// We've found maximum, but not pred. Continue search.
 	($t:ty ; found $max:expr ; hold ; $i:ident = $e:expr , $($rest:tt)* ) => {
 		right_iterable_impl!($t; found $max; hold; $($rest)*);
 	};
+
+	// We've just found maximum, mark it found and continue search for pred.
 	($t:ty ; maximum = $max:expr , $($rest:tt)*) => {
 		right_iterable_impl!($t; found $max; hold; $($rest)*);
 	};
+
+	// We've just found pred, mark it found and continue search for maximum.
 	($t:ty ; pred = $pred:expr , $($rest:tt)*) => {
 		right_iterable_impl!($t; hold; $pred; $($rest)*);
 	};
+
+	// We've found nothing. Continue search.
 	($t:ty ; $i:ident = $e:expr , $($rest:tt)*) => {
 		right_iterable_impl!($t; $($rest)*);
 	};
@@ -1627,24 +1677,59 @@ macro_rules! right_iterable_impl {
 }
 
 
+// Pattern matches function names and converts them into nested function calls.
 macro_rules! normalize {
+	// Minimum wrapper call.
     (minimum = $min:expr , $($rest:tt)*) => {
         normalize_minimum(normalize!($($rest)*), $min)
     };
+
+    // Maximum wrapper call.
     (maximum = $max:expr , $($rest:tt)*) => {
         normalize_maximum(normalize!($($rest)*), $max)
     };
+    
+    // Succ wrapper call.
     (succ = $succ:expr , $($rest:tt)*) => {
         normalize_succ(normalize!($($rest)*), $succ)
     };
+    
+    // Pred wrapper call.
     (pred = $pred:expr , $($rest:tt)*) => {
         normalize_pred(normalize!($($rest)*), $pred)
     };
+    
+    // Return wrapped expression.
     ($e:expr) => {$e};
 }
 
 
+// Implements the IntervalNormalize, LeftIterable, and RightIterable traits.
+macro_rules! interval_bounds {
+	// For the given type, we pass a sequence of mapping tokens to each of the
+	// trait implementing macros.
+    ($t:ty ; $($rest:tt)*) => {
+
+        impl IntervalNormalize for Interval<$t> {
+            fn normalize(&mut self) {
+                let mut n = normalize!($($rest)* *self);
+                n.0.normalize();
+                *self = n;
+            }
+        }
+
+        // LeftIterable
+        left_iterable_impl!($t; $($rest)*);
+		
+		// RightIterable        
+        right_iterable_impl!($t; $($rest)*);
+    }
+}
+
+
+// Implements basic normalization for a single builtin integer type.
 macro_rules! std_integer_normalization_impls {
+	// For each given type...
 	($($t:ident),*) => {$(
 		interval_bounds! { $t;
 		    minimum = std::$t::MIN,
@@ -1656,6 +1741,7 @@ macro_rules! std_integer_normalization_impls {
 }
 
 
+// Provide implementations of basic normalization for builtin integer types.
 std_integer_normalization_impls![
 	u8, u16, u32, u64, usize,
 	i8, i16, i32, i64, isize

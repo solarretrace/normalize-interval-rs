@@ -275,9 +275,9 @@ impl<T> From<T> for Bound<T> {
 impl<T> AsRef<T> for Bound<T> {
     #[inline]
     fn as_ref(&self) -> &T {
-        match self {
-            &Include(ref bound) => bound,
-            &Exclude(ref bound) => bound,
+        match *self {
+            Include(ref bound) => bound,
+            Exclude(ref bound) => bound,
         }
     }
 }
@@ -286,9 +286,9 @@ impl<T> AsRef<T> for Bound<T> {
 impl<T> AsMut<T> for Bound<T> {
     #[inline]
     fn as_mut(&mut self) -> &mut T {
-        match self {
-            &mut Include(ref mut bound) => bound,
-            &mut Exclude(ref mut bound) => bound,
+        match *self {
+            Include(ref mut bound) => bound,
+            Exclude(ref mut bound) => bound,
         }
     }
 }
