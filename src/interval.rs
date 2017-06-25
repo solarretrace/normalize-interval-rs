@@ -1502,6 +1502,7 @@ pub trait RightIterable: Clone {
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides normalization capabilities for an interval.
 pub trait IntervalNormalize: Sized {
+	/// The interval's point type.
 	type Point: IntervalBounds;
 
 	/// Normalizes the interval.
@@ -1705,7 +1706,8 @@ macro_rules! normalize {
 
 
 // Implements the IntervalNormalize, LeftIterable, and RightIterable traits.
-macro_rules! interval_bounds {
+#[macro_export]
+macro_rules! normalization_rules {
 	// For the given type, we pass a sequence of mapping tokens to each of the
 	// trait implementing macros.
     ($t:ty ; $($rest:tt)*) => {
@@ -1731,7 +1733,7 @@ macro_rules! interval_bounds {
 macro_rules! std_integer_normalization_impls {
 	// For each given type...
 	($($t:ident),*) => {$(
-		interval_bounds! { $t;
+		normalization_rules! { $t;
 		    minimum = std::$t::MIN,
 		    maximum = std::$t::MAX,
 		    succ = |n| if n < std::$t::MAX {Some(n + 1)} else {None},

@@ -41,7 +41,6 @@ use std::collections::btree_set;
 use std::collections::BTreeSet;
 use std::cmp::Ordering;
 use std::fmt;
-use std::mem;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,7 +143,6 @@ impl<T> Tine<T> where T: IntervalBounds {
 			ub: true,
 			incl: !interval.is_right_open(),
 		};
-		println!("\nGenerating tines {:?} {}, {}", interval, &left, &right); //TODO: Remove.
 		(left, right)
 	}
 
@@ -251,29 +249,37 @@ impl<T> fmt::Display for Tine<T> where T: fmt::Debug {
 ////////////////////////////////////////////////////////////////////////////////
 // Unification traits
 ////////////////////////////////////////////////////////////////////////////////
-pub trait LeftUnify: Sized {
+/// Provides a method for getting the next lower point from the given point.
+pub trait NextLower: Sized {
+	/// Returns the next point less than the given point.
 	fn next_lower(&self) -> Option<Self>;
 }
 
-pub trait RightUnify: Sized {
+/// Provides a method for getting the next upper point from the given point.
+pub trait NextUpper: Sized {
+	/// Returns the next point greater than the given point.
 	fn next_upper(&self) -> Option<Self>;
 }
 
-impl<T> LeftUnify for T {
+// Default implementation to be overridden by normalizeable types.
+impl<T> NextLower for T {
 	default fn next_lower(&self) -> Option<Self> {None}
 }
 
-impl<T> RightUnify for T {
+// Default implementation to be overridden by normalizeable types.
+impl<T> NextUpper for T {
 	default fn next_upper(&self) -> Option<Self> {None}
 }
 
-impl<T> LeftUnify for T where T: RightIterable {
+// Override of default for RightIterable types.
+impl<T> NextLower for T where T: RightIterable {
 	 fn next_lower(&self) -> Option<Self> {
 	 	self.pred()
 	 }
 }
 
-impl<T> RightUnify for T where T: LeftIterable {
+// Override of default for LeftIterable types.
+impl<T> NextUpper for T where T: LeftIterable {
 	 fn next_upper(&self) -> Option<Self> {
 	 	self.succ()
 	 }
@@ -282,23 +288,19 @@ impl<T> RightUnify for T where T: LeftIterable {
 ////////////////////////////////////////////////////////////////////////////////
 // OptionSplit
 ////////////////////////////////////////////////////////////////////////////////
+/// A type which may contain zero, one, or two of a value.
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
 pub enum OptionSplit<T> {
+	/// No value present.
 	None,
+	/// One value present.
 	One(T),
+	/// Two values present.
 	Two(T, T),
 }
 
 impl<T> OptionSplit<T> {
-	pub fn append(&mut self, t: T) {
-		let cur = mem::replace(self, OptionSplit::None);
-		*self = match cur {
-			OptionSplit::None	   => OptionSplit::One(t),
-			OptionSplit::One(fst)  => OptionSplit::Two(fst, t),
-			OptionSplit::Two(_, _) => panic!("OptionSplit is full"),
-
-		}
-	}
-
+	/// Joins two values in the `OptionSplit` if they are equal.
 	pub fn join_eq(self) -> OptionSplit<T> where T: Eq {
 		use OptionSplit::*;
 		match self {
@@ -316,7 +318,7 @@ struct DisjunctionMap<T> where T: IntervalBounds {
 	tine_map: BTreeSet<Tine<T>>,
 }
 
-impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
+impl<T> DisjunctionMap<T> where T: IntervalBounds + NextLower + NextUpper {
 	pub fn new() -> Self {
 		DisjunctionMap {
 			tine_map: BTreeSet::new(),
@@ -339,12 +341,9 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 			return
 		}
 
+		let tines = self.widen(Tine::from_interval(interval));
 
-		let tine_set = Tine::from_interval(interval);
-
-		let unified_tines = self.unify(tine_set);
-
-		match unified_tines {
+		match tines {
 			OptionSplit::None		 => unreachable!(),
 			OptionSplit::One(pt)	 => self.union_pt(pt),
 			OptionSplit::Two(lb, ub) => self.union_normal(lb, ub),
@@ -353,7 +352,6 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 	}
 
 	fn contains_pt(&self, point: &T) -> bool {
-
 		let lb = Tine {
 			point: Some(point.clone()),
 			lb: true,
@@ -379,35 +377,55 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 		self.tine_map.contains(&pt)
 	}
 
-	fn unify(&self, tines: OptionSplit<Tine<T>>) -> OptionSplit<Tine<T>> {
+	fn widen(&self, tines: OptionSplit<Tine<T>>) -> OptionSplit<Tine<T>> {
 		use OptionSplit::*;
 		match tines {
 			None		=> None,
-			One(pt)		=> Two(self.unify_l(pt.clone()), self.unify_r(pt)).join_eq(), 
-			Two(lb, ub) => Two(self.unify_l(lb), self.unify_r(ub)),
+			One(pt)		=> {
+				// Try to widen the point on both sides.
+				let mut lb = pt.clone();
+				lb.ub = false;
+				lb.lb = true;
+
+				let mut ub = pt.clone();
+				ub.ub = true;
+				ub.lb = false;
+				
+				let new_l = self.widen_l(lb);
+				let new_r = self.widen_r(ub);
+
+				if new_l.point == new_r.point {
+					// Widening didn't do anthing.
+					One(pt)
+				} else {
+					// Widening worked, use new tines.
+					Two(new_l, new_r)
+				}
+			}
+			Two(lb, ub) => Two(self.widen_l(lb), self.widen_r(ub)),
 		}
 	}
 
-	fn unify_l(&self, mut t: Tine<T>) -> Tine<T> {
-		while let Some(lb) = t.point.clone().and_then(|pt| pt.next_lower()) {
+	fn widen_l(&self, mut tine: Tine<T>) -> Tine<T> {
+		while let Some(lb) = tine.point.clone().and_then(|pt| pt.next_lower()) {
 			if self.contains_pt(&lb) {
-				t.point = Some(lb);
+				tine.point = Some(lb);
 			} else {
 				break
 			}
 		}
-		t
+		tine
 	}
 
-	fn unify_r(&self, mut t: Tine<T>) -> Tine<T> {
-		while let Some(ub) = t.point.clone().and_then(|pt| pt.next_upper()) {
+	fn widen_r(&self, mut tine: Tine<T>) -> Tine<T> {
+		while let Some(ub) = tine.point.clone().and_then(|pt| pt.next_upper()) {
 			if self.contains_pt(&ub) {
-				t.point = Some(ub);
+				tine.point = Some(ub);
 			} else {
 				break
 			}
 		}
-		t
+		tine
 	}
 
 	fn union_pt(&mut self, pt: Tine<T>) {
@@ -479,16 +497,6 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 		};
 		let after = r_map.iter().next().cloned();
 
-		println!("Before...");//TODO: Remove.
-		for tine in self.tine_map.iter() { //TODO: Remove.
-    		println!("\t{}", tine); //TODO: Remove.
-    	} //TODO: Remove.
-
-    	println!("After...");//TODO: Remove.
-		for tine in r_map.iter() { //TODO: Remove.
-    		println!("\t{}", tine); //TODO: Remove.
-    	} //TODO: Remove.
-
 		match (lb, ub) {
 			(None, None) => {
 				println!("Double annhilation");
@@ -496,13 +504,11 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 				debug_assert!(after.expect("lower bound annhilation").ub);
 			},
 			(Some(lb), None) => {
-				println!("Inserting lb\t{}", lb); //TODO: Remove.
 				r_map.insert(lb);
 				debug_assert!(after.expect("lower bound annhilation").ub);	
 			},
 
 			(None, Some(ub)) => {
-				println!("Inserting ub\t{}", ub); //TODO: Remove.
 				r_map.insert(ub);
 				debug_assert!(before.expect("upper bound annhilation").lb);
 			},
@@ -514,25 +520,19 @@ impl<T> DisjunctionMap<T> where T: IntervalBounds + LeftUnify + RightUnify {
 					|| (before.map(|b| b.lb) == Some(true) && lb.ub)
 
 				{
-					println!("Inserting lb/ub\t{}", lb); //TODO: Remove.
 					r_map.insert(lb);
 				}
 				if after.is_none() 
 					|| after.as_ref().map(|a| a.lb) == Some(true) 
 					|| (after.map(|a| a.ub) == Some(true)  && ub.lb)
 				{
-					println!("Inserting lb/ub\t{}", ub); //TODO: Remove.
 					r_map.insert(ub);
 				}
 
 			}
 		}
-		println!("Done."); //TODO: Remove.
-
+		
 		self.tine_map.extend(r_map);
-		for tine in self.tine_map.iter() { //TODO: Remove.
-    		println!("\t{}", tine); //TODO: Remove.
-    	} //TODO: Remove.
 	}
 }
 
@@ -676,6 +676,21 @@ mod tests {
 	}
 
 	#[test]
+	fn disjunction_map_insert_disjoint_close_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(15, 25);
+		let c = Interval::open(25, 30);
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![a, b, c]);
+	}
+
+	#[test]
 	fn disjunction_map_insert_overlap_close() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
@@ -688,6 +703,21 @@ mod tests {
 
 		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
 		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_close_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::closed(15, 25);
+		let c = Interval::open(25, 30);
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(0, 30)]);
 	}
 
 	#[test]
@@ -706,6 +736,21 @@ mod tests {
 	}
 
 	#[test]
+	fn disjunction_map_insert_disjoint_point_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(15, 25);
+		let c = Interval::point(15);
+		dm.union_insert(c.clone());
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(0, 25)]);
+	}
+
+	#[test]
 	fn disjunction_map_insert_overlap_exact() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
@@ -718,6 +763,21 @@ mod tests {
 
 		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
 		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_exact_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(15, 25);
+		let c = Interval::open(0, 25);
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(0, 25)]);
 	}
 
 	#[test]
@@ -736,6 +796,21 @@ mod tests {
 	}
 
 	#[test]
+	fn disjunction_map_insert_overlap_widen_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 15);
+		let b = Interval::open(15, 25);
+		let c = Interval::closed(0, 25);
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::closed(0, 25)]);
+	}
+
+	#[test]
 	fn disjunction_map_insert_overlap_point() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
@@ -749,6 +824,19 @@ mod tests {
 	}
 
 	#[test]
+	fn disjunction_map_insert_overlap_point_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::open(0, 30);
+		let b = Interval::point(15);
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::open(0, 30)]);
+	}
+
+	#[test]
 	fn disjunction_map_insert_overlap_unbounded() {
 		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
 
@@ -759,5 +847,62 @@ mod tests {
 
 		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
 		assert_eq!(dm_res, vec![Interval::from(Opaque(10))]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_overlap_unbounded_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::from(10);
+		let b = Interval::open(15, 30);
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::from(10)]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_units() {
+		let mut dm: DisjunctionMap<Opaque> = DisjunctionMap::new();
+
+		let a = Interval::point(Opaque(10));
+		let b = Interval::point(Opaque(11));
+		let c = Interval::point(Opaque(12));
+		let d = Interval::point(Opaque(13));
+		let e = Interval::point(Opaque(14));
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(c.clone());
+		dm.union_insert(d.clone());
+		dm.union_insert(e.clone());
+
+		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![
+			Interval::point(Opaque(10)),
+			Interval::point(Opaque(11)),
+			Interval::point(Opaque(12)),
+			Interval::point(Opaque(13)),
+			Interval::point(Opaque(14)),
+		]);
+	}
+
+	#[test]
+	fn disjunction_map_insert_units_normalized() {
+		let mut dm: DisjunctionMap<i32> = DisjunctionMap::new();
+
+		let a = Interval::point(10);
+		let b = Interval::point(11);
+		let c = Interval::point(12);
+		let d = Interval::point(13);
+		let e = Interval::point(14);
+		dm.union_insert(a.clone());
+		dm.union_insert(b.clone());
+		dm.union_insert(d.clone());
+		dm.union_insert(e.clone());
+		dm.union_insert(c.clone());
+
+		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
+		assert_eq!(dm_res, vec![Interval::closed(10, 14)]);
 	}
 }
