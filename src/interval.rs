@@ -1575,6 +1575,7 @@ fn normalize_pred<T, F>(interval: Interval<T>, pred: F) -> Interval<T>
 
 // Recursively matches 'expr = expr' statements until it finds the `succ =` and 
 // `minimum =` statements.
+#[macro_export]
 macro_rules! left_iterable_impl {
 	// Finished search, provide LeftIterable implementation.
 	($t:ty ; found $min:expr ; found $succ:expr) => {
@@ -1627,6 +1628,7 @@ macro_rules! left_iterable_impl {
 
 // Recursively matches 'expr = expr' statements until it finds the `pred =` and 
 // `maximum =` statements.
+#[macro_export]
 macro_rules! right_iterable_impl {
 	// Finished search, provide RightIterable implementation.
 	($t:ty ; found $max:expr ; found $pred:expr) => {
@@ -1679,6 +1681,7 @@ macro_rules! right_iterable_impl {
 
 
 // Pattern matches function names and converts them into nested function calls.
+#[macro_export]
 macro_rules! normalize {
 	// Minimum wrapper call.
     (minimum = $min:expr , $($rest:tt)*) => {
@@ -1711,7 +1714,6 @@ macro_rules! normalization_rules {
 	// For the given type, we pass a sequence of mapping tokens to each of the
 	// trait implementing macros.
     ($t:ty ; $($rest:tt)*) => {
-
         impl IntervalNormalize for Interval<$t> {
             fn normalize(&mut self) {
                 let mut n = normalize!($($rest)* *self);
@@ -1727,7 +1729,6 @@ macro_rules! normalization_rules {
         right_iterable_impl!($t; $($rest)*);
     }
 }
-
 
 // Implements basic normalization for a single builtin integer type.
 macro_rules! std_integer_normalization_impls {

@@ -31,6 +31,7 @@
 #[warn(missing_docs)]
 mod bound;
 #[warn(missing_docs)]
+#[macro_use]
 mod interval;
 #[warn(missing_docs)]
 mod parse;
