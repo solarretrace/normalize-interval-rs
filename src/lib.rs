@@ -25,13 +25,11 @@
 //! Provides a basic bounded interval type for doing complex set selections.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-
 #![feature(specialization)]
 
 #[warn(missing_docs)]
 mod bound;
 #[warn(missing_docs)]
-#[macro_use]
 mod interval;
 #[warn(missing_docs)]
 mod parse;
@@ -42,7 +40,10 @@ mod selection;
 
 
 // Re-exports.
-pub use bound::{Bound, BoundOps};
-pub use interval::*;
-pub use selection::*;
+pub use bound::{
+	Bound, 
+	BoundOps,
+};
+pub use interval::Interval;
+pub use selection::Selection;
 pub use parse::*;
