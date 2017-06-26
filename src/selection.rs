@@ -316,7 +316,7 @@ pub enum OptionSplit<T> {
 impl<T> OptionSplit<T> {
 	/// Joins two values in the `OptionSplit` if they are equal.
 	pub fn join_eq(self) -> OptionSplit<T> where T: Eq {
-		use OptionSplit::*;
+		use self::OptionSplit::*;
 		match self {
 			Two(a, b) => if a == b {One(a)} else {Two(a, b)},
 			_		  => self
@@ -404,7 +404,7 @@ impl<T> DisjunctionMap<T>
 	/// Widens the given `Tine` set to encompass neighboring points if their
 	/// `Interval` normalization would include them.
 	fn widen(&self, tines: OptionSplit<Tine<T>>) -> OptionSplit<Tine<T>> {
-		use OptionSplit::*;
+		use self::OptionSplit::*;
 		match tines {
 			None		=> None,
 			One(pt)		=> {
