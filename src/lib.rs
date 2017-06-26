@@ -44,6 +44,10 @@ pub use bound::{
 	Bound, 
 	BoundOps,
 };
-pub use interval::Interval;
+pub use interval::{
+	Interval,
+	LeftIterable,
+	RightIterable,
+};
 pub use selection::Selection;
 pub use parse::*;
