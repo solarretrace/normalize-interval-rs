@@ -39,7 +39,7 @@ use selection::Selection;
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides functions for parsing a type. Used by `Selection<T>` to parse the
 /// intervals and elements of the selection.
-pub trait SelectionElement where Self: Sized + PartialOrd +  Ord +  Clone {
+pub trait SelectionElement where Self: Sized + PartialOrd + Ord + Clone {
 	/// Parses the given string into a `Self`.
 	///
 	/// # Errors
@@ -161,7 +161,7 @@ impl<T> Selection<T> where T: SelectionElement + Normalize {
 			skip_all(parse_whitespace, text);
 		}
 
-		Ok(Selection::new(intervals))
+		Ok(Selection::from_intervals(intervals))
 	}
 
 	/// Parses a prefix of the given string into an `Interval`, shifting the 

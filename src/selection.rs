@@ -47,12 +47,12 @@ use std::fmt;
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly non-contiguous selection of intervals.
 #[derive(Debug, PartialEq, Clone)]
-pub struct Selection<T> where T: PartialOrd +  Ord +  Clone {
+pub struct Selection<T> where T: PartialOrd + Ord + Clone {
 	/// Internal map of ordered interval endpoints.
 	disjunction_map: DisjunctionMap<T>,
 }
 
-impl<T> Selection<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> Selection<T> where T: PartialOrd + Ord + Clone {
 	/// Returns an empty Selection.
 	pub fn empty() -> Self {
 		Selection {
@@ -61,7 +61,7 @@ impl<T> Selection<T> where T: PartialOrd +  Ord +  Clone {
 	}
 
 	/// Returns a Selection over the given intervals.
-	pub fn new<I>(intervals: I) -> Self
+	pub fn from_intervals<I>(intervals: I) -> Self
 		where I: IntoIterator<Item=Interval<T>>
 	{
 		Selection {
@@ -73,6 +73,18 @@ impl<T> Selection<T> where T: PartialOrd +  Ord +  Clone {
 	pub fn union(&mut self, interval: Interval<T>) {
 		self.disjunction_map.union_insert(interval);
 	}
+}
+
+
+impl<T> IntoIterator for Selection<T> where T: PartialOrd + Ord + Clone {
+	type Item = Interval<T>;
+    type IntoIter = SelectionIter<T>;
+    fn into_iter(self) -> Self::IntoIter {
+    	SelectionIter {
+    		tine_iter: self.disjunction_map.tine_map.into_iter(),
+    		saved: None,
+    	}
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +111,7 @@ struct Tine<T> {
 }
 
 
-impl<T> Tine<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 	/// Returns whether the `Tine` represents a point interval.
 	pub fn is_point(&self) -> bool {
 		!self.lb && !self.ub && self.incl && self.point.is_some()
@@ -203,16 +215,16 @@ impl<T> Tine<T> where T: PartialOrd +  Ord +  Clone {
 }
 
 
-impl<T> Eq for Tine<T> where T: PartialOrd +  Ord +  Clone {}
+impl<T> Eq for Tine<T> where T: PartialOrd + Ord + Clone {}
 
-impl<T> PartialOrd for Tine<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> PartialOrd for Tine<T> where T: PartialOrd + Ord + Clone {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 		Some(self.cmp(other))
 	}
 }
 
 // Tine ordering is total.
-impl<T> Ord for Tine<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> Ord for Tine<T> where T: PartialOrd + Ord + Clone {
 	fn cmp(&self, other: &Self) -> Ordering {
 		match (&self.point, &other.point) {
 			// Tine points will compare directly.
@@ -313,24 +325,12 @@ pub enum OptionSplit<T> {
 	Two(T, T),
 }
 
-impl<T> OptionSplit<T> {
-	/// Joins two values in the `OptionSplit` if they are equal.
-	pub fn join_eq(self) -> OptionSplit<T> where T: Eq {
-		use self::OptionSplit::*;
-		match self {
-			Two(a, b) => if a == b {One(a)} else {Two(a, b)},
-			_		  => self
-		}
-	}
-}
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // DisjunctionMap
 ////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, PartialEq, Clone)]
-struct DisjunctionMap<T> where T: PartialOrd +  Ord +  Clone {
+struct DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
 	// TODO: Consider using specialized balanced tree.
 	/// Tine tree.
 	tine_map: BTreeSet<Tine<T>>,
@@ -360,9 +360,7 @@ impl<T> DisjunctionMap<T>
 
 	/// Inserts the given `Interval` by unioning with the current contents.
 	pub fn union_insert(&mut self, interval: Interval<T>) {
-		if interval.is_empty() {
-			return
-		}
+		if interval.is_empty() {return}
 
 		let tines = self.widen(Tine::from_interval(interval));
 
@@ -565,7 +563,7 @@ impl<T> DisjunctionMap<T>
 	}
 }
 
-impl<T> IntoIterator for DisjunctionMap<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> IntoIterator for DisjunctionMap<T> where T: PartialOrd + Ord + Clone {
 	type Item = Interval<T>;
     type IntoIter = SelectionIter<T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -582,7 +580,7 @@ impl<T> IntoIterator for DisjunctionMap<T> where T: PartialOrd +  Ord +  Clone {
 // SelectionIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An iterator over the intervals in the `Selection`.
-pub struct SelectionIter<T> where T: PartialOrd +  Ord +  Clone {
+pub struct SelectionIter<T> where T: PartialOrd + Ord + Clone {
 	/// The `Tine` map yet to process.
 	tine_iter: btree_set::IntoIter<Tine<T>>,
 	
@@ -591,7 +589,7 @@ pub struct SelectionIter<T> where T: PartialOrd +  Ord +  Clone {
 	saved: Option<Tine<T>>,
 }
 
-impl<T> Iterator for SelectionIter<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> Iterator for SelectionIter<T> where T: PartialOrd + Ord + Clone {
 	type Item = Interval<T>;
 
 	fn next(&mut self) -> Option<Self::Item> {

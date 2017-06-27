@@ -50,7 +50,7 @@ pub struct Interval<T>(RawInterval<T>);
 
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.
-impl<T> Interval<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	/// Constructs a new interval from the given bounds. If the right bound
 	/// point is less than the left bound point, an empty interval will be 
 	/// returned.
@@ -993,14 +993,14 @@ impl<T> Interval<T> where T: PartialOrd +  Ord +  Clone {
 // Basic Trait impls
 ////////////////////////////////////////////////////////////////////////////////
 // Interval-from-Point conversion.
-impl<T> From<T> for Interval<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> From<T> for Interval<T> where T: PartialOrd + Ord + Clone {
 	#[inline]
 	fn from(t: T) -> Self {
 		Interval(Point(t))
 	}
 }
 
-impl<T> PartialEq for Interval<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> PartialEq for Interval<T> where T: PartialOrd + Ord + Clone {
 	fn eq(&self, other: &Self) -> bool {
 		self.0 == other.0
 	}
@@ -1056,7 +1056,7 @@ enum RawInterval<T> {
 	Full,
 }
 
-impl<T> RawInterval<T> where T: PartialOrd +  Ord +  Clone {
+impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 	/// Constructs a new interval from the given bounds. If the right bound
 	/// point is less than the left bound point, an empty interval will be 
 	/// returned.
@@ -1285,6 +1285,7 @@ impl<T> RawInterval<T> where T: PartialOrd +  Ord +  Clone {
 	pub fn union_all<I>(intervals: I) -> Vec<Self>
 		where I: IntoIterator<Item=Self>
 	{
+		// TODO: Consider using selection/disjunction map. It may be faster.
 		let mut it = intervals.into_iter().filter(|i| !i.is_empty());
 
 		// Get first interval.
@@ -1316,7 +1317,7 @@ impl<T> RawInterval<T> where T: PartialOrd +  Ord +  Clone {
 
 impl<T> RawInterval<T>
 	where
-		T: PartialOrd +  Ord +  Clone + LeftIterable,
+		T: PartialOrd + Ord + Clone + LeftIterable,
 		Interval<T>: Normalize
 {
 	/// Removes and returns the lowest point in the interval.
@@ -1354,7 +1355,7 @@ impl<T> RawInterval<T>
 
 impl<T> RawInterval<T>
 	where
-		T: PartialOrd +  Ord +  Clone + RightIterable,
+		T: PartialOrd + Ord + Clone + RightIterable,
 		Interval<T>: Normalize
 {
 	/// Removes and returns the greatest point in the interval.
@@ -1422,7 +1423,7 @@ impl<T> fmt::Display for RawInterval<T>
 // Iterator impls for Interval
 ////////////////////////////////////////////////////////////////////////////////
 impl<T> Iterator for Interval<T>
-	where T: PartialOrd +  Ord +  Clone + LeftIterable, Interval<T>: Normalize
+	where T: PartialOrd + Ord + Clone + LeftIterable, Interval<T>: Normalize
 {
 	type Item = T;
 	fn next(&mut self) -> Option<T> {
@@ -1434,7 +1435,7 @@ impl<T> Iterator for Interval<T>
 
 impl<T> DoubleEndedIterator for Interval<T>
 	where 
-		T: PartialOrd +  Ord +  Clone + LeftIterable + RightIterable, 
+		T: PartialOrd + Ord + Clone + LeftIterable + RightIterable, 
 		Interval<T>: Normalize
 {
 	fn next_back(&mut self) -> Option<T> {
@@ -1450,7 +1451,7 @@ impl<T> DoubleEndedIterator for Interval<T>
 // Iterator impls for RawInterval
 ////////////////////////////////////////////////////////////////////////////////
 impl<T> Iterator for RawInterval<T>
-	where T: PartialOrd +  Ord +  Clone + LeftIterable
+	where T: PartialOrd + Ord + Clone + LeftIterable
 {
 	type Item = T;
 	fn next(&mut self) -> Option<T> {
@@ -1460,7 +1461,7 @@ impl<T> Iterator for RawInterval<T>
 }
 
 impl<T> DoubleEndedIterator for RawInterval<T>
-	where T: PartialOrd +  Ord +  Clone + LeftIterable + RightIterable, 
+	where T: PartialOrd + Ord + Clone + LeftIterable + RightIterable, 
 		Interval<T>: Normalize
 {
 	fn next_back(&mut self) -> Option<T> {
@@ -1505,7 +1506,7 @@ pub trait RightIterable: Clone {
 /// Provides normalization capabilities for an interval.
 pub trait Normalize: Sized {
 	/// The interval's point type.
-	type Point: PartialOrd +  Ord +  Clone;
+	type Point: PartialOrd + Ord + Clone;
 
 	/// Normalizes the interval.
 	fn normalize(&mut self);
@@ -1529,16 +1530,21 @@ impl<T> Normalize for Interval<T>
 	where T: PartialOrd + Ord + Clone + LeftIterable + RightIterable
 {
     fn normalize(&mut self) {
+    	let (min, max) = (T::minimum(), T::maximum());
+
     	let old = mem::replace(&mut self.0, Empty);
     	(*self).0 = match old {
-			Open(l, r)		=> Closed(l.succ().unwrap(), r.pred().unwrap()),
-			LeftOpen(l, r)	=> Closed(l.succ().unwrap(), r),
-			RightOpen(l, r) => Closed(l, r.pred().unwrap()),
-			UpTo(p)			=> Closed(T::minimum(), p.pred().unwrap()),
-			UpFrom(p)		=> Closed(p.succ().unwrap(), T::maximum()),
-			To(p)			=> Closed(T::minimum(), p),
-			From(p)			=> Closed(p, T::maximum()),
-			Full			=> Closed(T::minimum(), T::maximum()),
+			Open(l, r)		=> match (l.succ(), r.pred()) {
+				(Some(l), Some(r)) => Closed(l, r),
+				_				   => Empty,
+			},
+			LeftOpen(l, r)	=> l.succ().map_or(Empty, |l| Closed(l, r)),
+			RightOpen(l, r) => r.pred().map_or(Empty, |r| Closed(l, r)),
+			UpTo(r)			=> r.pred().map_or(Empty, |r| Closed(min, r)),
+			UpFrom(l)		=> l.succ().map_or(Empty, |l| Closed(l, max)),
+			To(p)			=> Closed(min, p),
+			From(p)			=> Closed(p, max),
+			Full			=> Closed(min, max),
 			_				=> old,
     	}
     }
@@ -1651,7 +1657,7 @@ macro_rules! right_iterable_impl {
 
 
 
-// Implements the Normalize, LeftIterable, and RightIterable traits.
+// Implements the LeftIterable and RightIterable traits.
 macro_rules! iterable_impls {
 	// For the given type, we pass a sequence of mapping tokens to each of the
 	// trait implementing macros.
