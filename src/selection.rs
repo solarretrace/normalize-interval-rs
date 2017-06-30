@@ -40,7 +40,6 @@ use std::collections::btree_set;
 use std::collections::BTreeSet;
 use std::cmp::Ordering;
 use std::fmt;
-use std::mem;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -192,6 +191,15 @@ impl<T> TineSet<T>
 		dm
 	}
 
+	/// Gets an iterator that returns the `Intervals` in the `TineSet` in
+	/// ascending order.
+	pub fn iter(&self) -> Iter<T> {
+		Iter {
+			tine_iter: self.0.iter(),
+			saved:None,
+		}
+	}
+
 	/// Returns whether the `TineSet` is bounded on both sides.
 	pub fn is_bounded(&self) -> bool {
 		let l_unbounded = Tine {
@@ -248,38 +256,35 @@ impl<T> TineSet<T>
 	/// Returns the largest `TineSet` whose points are all contained
 	/// entirely within this `TineSet` and the given `TineSet`.
 	pub fn intersect(&self, other: &Self) -> Self {
-		let mut a = self.0.iter();
-		let mut b = other.0.iter();
-		let mut a_incl = true;
-		let mut b_incl = true;
+		let mut a_intervals = self.iter();
+		let mut b_intervals = other.iter();
 
-		let mut a_cur_lb: &Tine<T>;
-		let mut b_cur_lb: &Tine<T>;
+		let mut intersection = Self::new();
+		while let Some(a_interval) = a_intervals.next() {
+			'segment: loop {
+				if let Some(b_interval) = b_intervals.next() {
+					let i = a_interval.intersect(&b_interval);
+					if !i.is_empty() {
+						intersection.union_interval(i);
+					} else {
+						// Nothing more overlapping in this segment.
+						break 'segment;
+					}
 
-		match (a.next(), b.next()) {
-			(Some(mut tine_a), Some(mut tine_b)) => {
-				debug_assert!(tine_a.lb);
-				debug_assert!(tine_b.lb);
-
-				if tine_a > tine_b {
-					mem::swap(&mut a, &mut b);
-					mem::swap(&mut tine_a, &mut tine_b);
+				} else {
+					// Nothing more overlapping anywhere.
+					return intersection;
 				}
-				a_cur_lb = tine_a;
-				b_cur_lb = tine_b;
-			},
-			_							 => return Self::new(),
+			}
 		}
-
-		unimplemented!()
+		intersection
 	}
 
 	/// Returns a `TineSet` containing all of the points contained
 	/// within this `TineSet` and the given `TineSet`.
 	pub fn union(&self, other: &Self) -> Self {
-		// TODO: Don't clone here.
 		let mut union = self.clone();
-		for interval in other.clone().into_iter() {
+		for interval in other.iter() {
 			union.union_interval(interval);
 		}
 		union
@@ -288,13 +293,14 @@ impl<T> TineSet<T>
 	/// Returns a `TineSet`s containing all of the points contained
 	/// within this `TineSet` that are not in the given `TineSet`.
 	pub fn minus(&self, other: &Self) -> Self {
-		unimplemented!()
+		other.complement()
+			.intersect(self)
 	}
 
 	/// Returns a `TineSet` containing all of the points not in 
 	/// this `TineSet`.
 	pub fn complement(&self) -> Self {
-		unimplemented!()
+		TineSet::from(Interval::full()).intersect(self)
 	}
 
 	/// Returns the smallest closed `TineSet` containing all of the
@@ -316,12 +322,18 @@ impl<T> TineSet<T>
 	/// Returns whether the `TineSet` contains all of the points in the
 	/// given `Interval`.
 	pub fn contains_interval(&self, interval: &Interval<T>) -> bool {
-		unimplemented!()
+		let check = self
+			.intersect(&interval.clone().into())
+			.iter()
+			.next()
+			.map(|ref int| int == interval);
+
+		check == Some(true)
 	}
 
 	/// 
 	pub fn intersect_interval(&mut self, interval: &Interval<T>) {
-		unimplemented!()
+		*self = self.intersect(&interval.clone().into());
 	}
 
 	/// Inserts the given `Interval` by unioning with the current contents.
@@ -334,7 +346,6 @@ impl<T> TineSet<T>
 			OptionSplit::None		 => unreachable!(),
 			OptionSplit::One(pt)	 => self.union_pt(pt),
 			OptionSplit::Two(lb, ub) => self.union_normal(lb, ub),
-
 		}
 	}
 
@@ -540,7 +551,63 @@ impl<T> IntoIterator for TineSet<T> where T: PartialOrd + Ord + Clone {
     }
 }
 
+impl<T> From<Interval<T>> for TineSet<T> where T: PartialOrd + Ord + Clone {
+	fn from(interval: Interval<T>) -> Self {
+		let mut new = Self::new();
+		new.union_interval(interval);
+		new
+	}
+}
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Iter
+////////////////////////////////////////////////////////////////////////////////
+/// An iterator over the intervals in the `TineSet`.
+pub struct Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
+	/// The `TineSet` yet to process.
+	tine_iter: btree_set::Iter<'t, Tine<T>>,
+	
+	/// A `Tine` from a previous interval that contains information for the next
+	/// `Interval`.
+	saved: Option<&'t Tine<T>>,
+}
+
+impl<'t, T> Iterator for Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
+	type Item = Interval<T>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some(saved) = self.saved.take() {
+			debug_assert!(saved.lb);
+			let second = self.tine_iter
+				.next()
+				.expect("upper bound matching lower bound");
+			debug_assert!(second.ub);
+			if second.lb {self.saved = Some(second);}
+
+			return Some(Interval::new(
+				Tine::into_bound_lower(saved.clone()),
+				Tine::into_bound_upper(second.clone())));
+
+		}
+		
+		if let Some(first) = self.tine_iter.next() {
+			debug_assert!(!first.ub);
+
+			if first.is_point() {
+				return Some(Interval::point(first.clone().point.expect("point tine")));
+			}
+			let second = self.tine_iter.next().expect("upper bound");
+			if second.lb {self.saved = Some(second);}
+
+			Some(Interval::new(
+				Tine::into_bound_lower(first.clone()),
+				Tine::into_bound_upper(second.clone())))
+		} else {
+			None
+		}
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // SelectionIter
@@ -561,7 +628,9 @@ impl<T> Iterator for SelectionIter<T> where T: PartialOrd + Ord + Clone {
 	fn next(&mut self) -> Option<Self::Item> {
 		if let Some(saved) = self.saved.take() {
 			debug_assert!(saved.lb);
-			let second = self.tine_iter.next().expect("");
+			let second = self.tine_iter
+				.next()
+				.expect("upper bound matching lower bound");
 			debug_assert!(second.ub);
 			if second.lb {self.saved = Some(second.clone());}
 
@@ -840,7 +909,7 @@ mod tests {
 	struct Opaque(i32);
 
 	#[test]
-	fn disjunction_map_insert_disjoint() {
+	fn tine_set_insert_disjoint() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -855,7 +924,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_disjoint_normalized() {
+	fn tine_set_insert_disjoint_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -870,7 +939,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap() {
+	fn tine_set_insert_overlap() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -885,7 +954,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_normalized() {
+	fn tine_set_insert_overlap_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -900,7 +969,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_disjoint_close() {
+	fn tine_set_insert_disjoint_close() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -915,7 +984,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_disjoint_close_normalized() {
+	fn tine_set_insert_disjoint_close_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -930,7 +999,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_close() {
+	fn tine_set_insert_overlap_close() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -945,7 +1014,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_close_normalized() {
+	fn tine_set_insert_overlap_close_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -960,7 +1029,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_disjoint_point() {
+	fn tine_set_insert_disjoint_point() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -975,7 +1044,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_disjoint_point_normalized() {
+	fn tine_set_insert_disjoint_point_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -990,7 +1059,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_exact() {
+	fn tine_set_insert_overlap_exact() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -1005,7 +1074,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_exact_normalized() {
+	fn tine_set_insert_overlap_exact_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -1020,7 +1089,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_widen() {
+	fn tine_set_insert_overlap_widen() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(15));
@@ -1035,7 +1104,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_widen_normalized() {
+	fn tine_set_insert_overlap_widen_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 15);
@@ -1050,7 +1119,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_point() {
+	fn tine_set_insert_overlap_point() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::open(Opaque(0), Opaque(30));
@@ -1063,7 +1132,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_point_normalized() {
+	fn tine_set_insert_overlap_point_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::open(0, 30);
@@ -1076,7 +1145,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_unbounded() {
+	fn tine_set_insert_overlap_unbounded() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::from(Opaque(10));
@@ -1089,7 +1158,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_overlap_unbounded_normalized() {
+	fn tine_set_insert_overlap_unbounded_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::from(10);
@@ -1102,7 +1171,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_units() {
+	fn tine_set_insert_units() {
 		let mut dm: TineSet<Opaque> = TineSet::new();
 
 		let a = Interval::point(Opaque(10));
@@ -1127,7 +1196,7 @@ mod tests {
 	}
 
 	#[test]
-	fn disjunction_map_insert_units_normalized() {
+	fn tine_set_insert_units_normalized() {
 		let mut dm: TineSet<i32> = TineSet::new();
 
 		let a = Interval::point(10);
