@@ -617,7 +617,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		*self == Interval::normalized(Full)
 	}
 	
-	/// Returns whether the interval is bounded on both sides.
+	/// Returns whether the `Interval` is bounded on both sides.
 	///
 	/// # Example
 	///
@@ -669,7 +669,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		self.0.upper_bound()
 	}
 	
-	/// Returns the greatest lower bound of the interval.
+	/// Returns the greatest lower bound of the `Interval`.
 	///
 	/// # Example
 	///
@@ -698,7 +698,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		self.0.infimum()
 	}
 	
-	/// Returns the least upper bound of the interval.
+	/// Returns the least upper bound of the `Interval`.
 	///
 	/// # Example
 	///
@@ -727,7 +727,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		self.0.supremum()
 	}
 	
-	/// Returns whether the interval contains the given point.
+	/// Returns whether the `Interval` contains the given point.
 	///
 	/// # Example
 	///
@@ -745,8 +745,8 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		self.0.contains(point)
 	}
 	
-	/// Returns the smallest interval that contains all of the points contained
-	/// within this interval and the given interval.
+	/// Returns the smallest `Interval` that contains all of the points
+	/// contained within this `Interval` and the given `Interval`.
 	///
 	/// # Example
 	///
@@ -762,8 +762,8 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		Interval::normalized(self.0.enclose(&other.0))
 	}
 	
-	/// Returns the largest interval whose points are all contained
-	/// entirely within this interval and the given interval.
+	/// Returns the largest `Interval` whose points are all contained
+	/// entirely within this `Interval` and the given `Interval`.
 	///
 	/// # Example
 	///
@@ -780,7 +780,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 	
 	/// Returns a `Vec` of `Interval`s containing all of the points contained
-	/// within this interval and the given interval.
+	/// within this `Interval` and the given `Interval`.
 	///
 	/// # Example
 	///
@@ -812,7 +812,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 	
 	/// Returns a `Vec` of `Interval`s containing all of the points contained
-	/// within this interval that are not in the given interval.
+	/// within this `Interval` that are not in the given `Interval`.
 	///
 	/// # Example
 	///
@@ -847,7 +847,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 	
 	/// Returns a `Vec` of `Interval`s containing all of the points not in the
-	/// interval.
+	/// `Interval`.
 	///
 	/// # Example
 	///
@@ -869,8 +869,8 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 			.collect()
 	}
 
-	/// Returns the smallest closed interval containing all of the points in 
-	/// this interval.
+	/// Returns the smallest closed `Interval` containing all of the points in 
+	/// this `Interval`.
 	pub fn closure(&self) -> Self {
 		Interval::normalized(match self.0 {
 			Open(ref l, ref r)		=> Closed(l.clone(), r.clone()),
@@ -884,7 +884,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		})
 	}
 
-	/// Returns the partitions the interval formed by the given point.
+	/// Returns the partitions the `Interval` formed by the given point.
 	///
 	/// # Example
 	///
@@ -915,7 +915,8 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 
-	/// Converts the interval into an `Option`, returning `None` if it is empty.
+	/// Converts the `Interval` into an `Option`, returning `None` if it is 
+	/// empty.
 	///
 	/// # Example
 	///
@@ -936,7 +937,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 	}
 
 
-	/// Returns the intersection of all of the given intervals.
+	/// Returns the intersection of all of the given `Interval`s.
 	///
 	/// # Example
 	///
@@ -961,7 +962,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 		)
 	}
 
-	/// Returns the union of all of the given intervals.
+	/// Returns the union of all of the given `Interval`s.
 	///
 	/// # Example
 	///
