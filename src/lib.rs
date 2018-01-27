@@ -35,7 +35,8 @@ mod interval;
 mod parse;
 #[warn(missing_docs)]
 mod selection;
-
+#[cfg(test)]
+mod test;
 
 
 

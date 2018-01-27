@@ -1694,12 +1694,9 @@ std_integer_normalization_impls![
 
 
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Local tests
-////////////////////////////////////////////////////////////////////////////////
 #[cfg(test)]
-mod tests {
+mod test {
+
 	use interval::Bound;
 	use super::*;
 
@@ -1786,7 +1783,7 @@ mod tests {
 		
 		assert_eq!(int.upper_bound(), Some(Bound::Exclude(2)));
 	}
-	
+
 	#[test]
 	fn raw_interval_infimum() {
 		let int = RawInterval::open(0, 2);
@@ -1913,4 +1910,5 @@ mod tests {
 
 		assert_eq!(int.rev().collect::<Vec<_>>(), vec![12, 11, 10, 9, 8]);
 	}
+
 }

@@ -42,6 +42,23 @@ use std::cmp::Ordering;
 use std::fmt;
 
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Split
+////////////////////////////////////////////////////////////////////////////////
+/// A type which may contain zero, one, or two of a value.
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
+pub enum Split<T> {
+	/// No value present.
+	None,
+	/// One value present.
+	One(T),
+	/// Two values present.
+	Two(T, T),
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Selection
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,6 +77,13 @@ impl<T> Selection<T> where T: PartialOrd + Ord + Clone {
 		where I: IntoIterator<Item=Interval<T>>
 	{
 		Selection(TineSet::from_intervals(intervals))
+	}
+
+
+	/// Gets an iterator that returns the `Intervals` in the `Selection` in
+	/// ascending order.
+	pub fn iter(&self) -> Iter<T> {
+		self.0.iter()
 	}
 
 	/// Returns whether the `Selection` is full (i.e., contains all points.)
@@ -343,9 +367,9 @@ impl<T> TineSet<T>
 		let tines = self.widen(Tine::from_interval(interval));
 
 		match tines {
-			OptionSplit::None		 => unreachable!(),
-			OptionSplit::One(pt)	 => self.union_pt(pt),
-			OptionSplit::Two(lb, ub) => self.union_normal(lb, ub),
+			Split::None		 => unreachable!(),
+			Split::One(pt)	 => self.union_pt(pt),
+			Split::Two(lb, ub) => self.union_normal(lb, ub),
 		}
 	}
 
@@ -378,8 +402,8 @@ impl<T> TineSet<T>
 
 	/// Widens the given `Tine` set to encompass neighboring points if their
 	/// `Interval` normalization would include them.
-	fn widen(&self, tines: OptionSplit<Tine<T>>) -> OptionSplit<Tine<T>> {
-		use self::OptionSplit::*;
+	fn widen(&self, tines: Split<Tine<T>>) -> Split<Tine<T>> {
+		use self::Split::*;
 		match tines {
 			None		=> None,
 			One(pt)		=> {
@@ -434,109 +458,130 @@ impl<T> TineSet<T>
 	}
 
 	/// Inserts a point `Interval` into the map.
-	fn union_pt(&mut self, pt: Tine<T>) {
+	fn union_pt(&mut self, tine: Tine<T>) {
+		// Should have proper bounds set...
+		debug_assert!(tine.lb);
+		debug_assert!(tine.ub);
+
 		if self.0.is_empty() {
-			self.0.insert(pt);
+			self.0.insert(tine);
 			return
 		}
 
-		let mut r_map = self.0.split_off(&pt);
+		// Split TineSet.
+		let mut r_set = self.0.split_off(&tine);
 		let before = self.0.iter().next_back().cloned();
-		let after = r_map.iter().next().cloned();
+		let after = r_set.iter().next().cloned();
 
+		// Check Tines immediately before (<) and after (>=) the given point...
 		match (before, after) {
-			(_,			  Some(ref a)) if a.point == pt.point
-				=> if let Some(merged) = pt.merge(a.clone()) {
-					r_map.insert(merged);
+			// Merge the point with the left bound of after if they overlap.
+			(_,			  Some(ref a)) if tine.point == a.point
+				=> if let Some(merged) = tine.merge(a.clone()) {
+					r_set.insert(merged);
 				} else {
-					r_map.remove(&a);
+					r_set.remove(&a);
 				},
 			
+			// Point is strictly between two others.
 			(Some(ref b), Some(ref a)) if b.ub && a.lb
-				=> {r_map.insert(pt);},
+				=> {r_set.insert(tine);},
 
+			// Point is within an existing interval, so do nothing.
 			(Some(_),	  Some(_))
-				=> (), // Point is subsumed; do nothing.
+				=> (),
 
-			(Some(ref b), None)
-				=> {r_map.insert(pt); debug_assert!(!b.lb);}
-
-			(None,		  Some(a))
-				=> {r_map.insert(pt); debug_assert!(!a.ub);}
-
-			_	=> (), // Nothing to do.
+			// Point is (>) everything, (>) everything, or selection is empty.
+			_	=> {r_set.insert(tine);},
 		};
 
-		self.0.extend(r_map);
+		self.0.extend(r_set);
 	}
 
 	/// Inserts a non-point, non-empty `Interval` into the map.
-	fn union_normal(&mut self, lb: Tine<T>, ub: Tine<T>) {
+	fn union_normal(&mut self, l_tine: Tine<T>, r_tine: Tine<T>) {
 		// Should have proper bounds set...
-		debug_assert!(lb.lb);
-		debug_assert!(ub.ub);
+		debug_assert!(l_tine.lb);
+		debug_assert!(r_tine.ub);
 
+		// Early exit for new or full intervals.
 		if self.0.is_empty() 
-			|| (lb.point.is_none() && ub.point.is_none()) 
+			|| (l_tine.point.is_none() && r_tine.point.is_none()) 
 		{
 			self.0 = BTreeSet::new();
-			self.0.insert(lb);
-			self.0.insert(ub);
+			self.0.insert(l_tine);
+			self.0.insert(r_tine);
 			return
 		}
 
-		let mut r_map = self.0.split_off(&lb);
+
+		// Split the TineSet at the left tine.
+		let mut r_set = self.0.split_off(&l_tine);
 		let before = self.0.iter().next_back().cloned();
 
-		let lb = if let Some(a) = r_map.take(&lb) {
-			lb.merge(a)
-		} else {
-			Some(lb)
+		// Merge with (=) tine if needed.
+		let l_tine = match r_set.iter().cloned().next() {
+			Some(ref n) if l_tine.point == n.point => {
+				let rl_tine = r_set.take(n).expect("take matched tine");
+				l_tine.merge(rl_tine)
+			}
+			_								 => Some(l_tine), 
 		};
 
-		let mut r_map = r_map.split_off(&ub);
+		// Split the TineSet at the right tine.
+		let mut r_set = r_set.split_off(&r_tine);
 
-		let ub = if let Some(a) = r_map.take(&ub) {
-			ub.merge(a)
-		} else {
-			Some(ub)
+		// Merge with (=) tine if needed.
+		let r_tine = match r_set.iter().cloned().next() {
+			Some(ref n) if r_tine.point == n.point => {
+				let rr_tine = r_set.take(n).expect("take matched tine");
+				r_tine.merge(rr_tine)
+			}
+			_								 => Some(r_tine), 
 		};
-		let after = r_map.iter().next().cloned();
 
-		match (lb, ub) {
+		let after = r_set.iter().next().cloned();
+
+
+		match (l_tine, r_tine) {
+			// Both points are joining intervals.
 			(None, None) => {
-				debug_assert!(before.expect("upper bound annhilation").lb);
-				debug_assert!(after.expect("lower bound annhilation").ub);
+				debug_assert!(before.expect("before join is lower bound").lb);
+				debug_assert!(after.expect("after join is upper bound").ub);
 			},
+
+			// Right point joins two intervals.
 			(Some(lb), None) => {
-				r_map.insert(lb);
-				debug_assert!(after.expect("lower bound annhilation").ub);	
+				r_set.insert(lb);
+				debug_assert!(after.expect("before join is lower bound").ub);	
 			},
 
+			// Left point joins two intervals.
 			(None, Some(ub)) => {
-				r_map.insert(ub);
-				debug_assert!(before.expect("upper bound annhilation").lb);
+				r_set.insert(ub);
+				debug_assert!(before.expect("after join is upper bound").lb);
 			},
 
+			// Neither point joins intervals.
 			(Some(lb), Some(ub)) => {
 				if before.is_none() 
 					|| before.as_ref().map(|b| b.ub) == Some(true)
 					|| (before.map(|b| b.lb) == Some(true) && lb.ub)
 
 				{
-					r_map.insert(lb);
+					r_set.insert(lb);
 				}
 				if after.is_none() 
 					|| after.as_ref().map(|a| a.lb) == Some(true) 
 					|| (after.map(|a| a.ub) == Some(true)  && ub.lb)
 				{
-					r_map.insert(ub);
+					r_set.insert(ub);
 				}
 
 			}
 		}
 		
-		self.0.extend(r_map);
+		self.0.extend(r_set);
 	}
 }
 
@@ -592,10 +637,12 @@ impl<'t, T> Iterator for Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
 		}
 		
 		if let Some(first) = self.tine_iter.next() {
-			debug_assert!(!first.ub);
+			debug_assert!(first.lb);
 
 			if first.is_point() {
-				return Some(Interval::point(first.clone().point.expect("point tine")));
+				return Some(Interval::point(
+					first.clone().point.expect("point tine")
+				));
 			}
 			let second = self.tine_iter.next().expect("upper bound");
 			if second.lb {self.saved = Some(second);}
@@ -608,6 +655,8 @@ impl<'t, T> Iterator for Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
 		}
 	}
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // SelectionIter
@@ -641,7 +690,7 @@ impl<T> Iterator for SelectionIter<T> where T: PartialOrd + Ord + Clone {
 		}
 		
 		if let Some(first) = self.tine_iter.next() {
-			debug_assert!(!first.ub);
+			debug_assert!(first.lb);
 
 			if first.is_point() {
 				return Some(Interval::point(first.point.expect("point tine")));
@@ -657,6 +706,7 @@ impl<T> Iterator for SelectionIter<T> where T: PartialOrd + Ord + Clone {
 		}
 	}
 }
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -690,14 +740,14 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 	}
 
 	/// Returns the set of `Tine`s representing the given interval.
-	pub fn from_interval(interval: Interval<T>) -> OptionSplit<Self> {
+	pub fn from_interval(interval: Interval<T>) -> Split<Self> {
 		if interval.is_empty() {
-			OptionSplit::None
+			Split::None
 		} else if interval.is_degenerate() {
-			OptionSplit::One(Self::from_degenerate_interval(interval))
+			Split::One(Self::from_degenerate_interval(interval))
 		} else {
 			let (lb, ub) = Self::from_nondegenerate_interval(interval);
-			OptionSplit::Two(lb, ub)
+			Split::Two(lb, ub)
 		}
 	}
 
@@ -708,8 +758,8 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 		debug_assert!(interval.is_degenerate());
 		Tine {
 			point: interval.infimum(),
-			lb: false,
-			ub: false,
+			lb: true,
+			ub: true,
 			incl: true,
 		}
 	}
@@ -842,6 +892,7 @@ impl<T> fmt::Display for Tine<T> where T: fmt::Debug {
 }
 
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Unification traits
 ////////////////////////////////////////////////////////////////////////////////
@@ -882,20 +933,6 @@ impl<T> NextUpper for T where T: LeftIterable {
 }
 
 
-
-////////////////////////////////////////////////////////////////////////////////
-// OptionSplit
-////////////////////////////////////////////////////////////////////////////////
-/// A type which may contain zero, one, or two of a value.
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub enum OptionSplit<T> {
-	/// No value present.
-	None,
-	/// One value present.
-	One(T),
-	/// Two values present.
-	Two(T, T),
-}
 
 
 
