@@ -45,8 +45,8 @@ use self::RawInterval::*;
 // Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 /// A contiguous interval of the type T.
-#[derive(Debug, Clone, Copy)]
-pub struct Interval<T>(RawInterval<T>);
+#[derive(Debug, Eq, Hash, Clone, Copy)]
+pub struct Interval<T>(RawInterval<T>) where T: PartialOrd + Ord + Clone;
 
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.
