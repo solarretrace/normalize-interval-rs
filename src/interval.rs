@@ -986,6 +986,30 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone {
 			.map(Interval::normalized)
 			.collect()
 	}
+
+	/// Returns the `Interval` enclosing of all of the given `Interval`s.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use interval::Interval;
+	///
+	/// let ints = vec![
+	///     Interval::closed(0, 2),
+	///     Interval::closed(-1, 1),
+	///     Interval::closed(0, 1),
+	///     Interval::closed(0, 1),
+	/// ];
+	///
+	/// assert_eq!(Interval::enclose_all(ints), Interval::closed(-1, 2));
+	/// ```
+	pub fn enclose_all<I>(intervals: I) -> Self
+		where I: IntoIterator<Item=Self>
+	{
+		Interval::normalized(
+			RawInterval::enclose_all(intervals.into_iter().map(|i| i.0))
+		)
+	}
 }
 
 
@@ -1312,6 +1336,15 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 		} else {
 			Vec::new()
 		}
+	}
+
+	/// Returns the interval enclosing all of the given intervals.
+	pub fn enclose_all<I>(intervals: I) -> Self
+		where I: IntoIterator<Item=Self>
+	{
+		intervals
+			.into_iter()
+			.fold(Full, |acc, i| acc.enclose(&i))
 	}
 }
 
