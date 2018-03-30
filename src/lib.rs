@@ -1,54 +1,39 @@
-// The MIT License (MIT)
-// 
-// Copyright (c) 2017 Skylor R. Schermer
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in 
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Copyright 2018 Skylor R. Schermer.
 //
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 ////////////////////////////////////////////////////////////////////////////////
 //!
 //! Provides a basic bounded interval type for doing complex set selections.
 //!
 ////////////////////////////////////////////////////////////////////////////////
+#![doc(html_root_url = "https://docs.rs/interval/0.12.0")]
 #![feature(specialization)]
+#![feature(conservative_impl_trait)]
+#![warn(missing_docs)]
 
-#[warn(missing_docs)]
-mod bound;
-#[warn(missing_docs)]
-mod interval;
-#[warn(missing_docs)]
-mod parse;
-#[warn(missing_docs)]
-mod selection;
+// Public modules.
+pub mod bound;
+pub mod interval;
+pub mod normalize;
+pub mod selection;
+#[cfg(feature = "perforate")]
+pub mod perforate;
+
+// Internal modules.
+pub(crate) mod raw_interval;
+pub(crate) mod tine;
+pub(crate) mod tine_tree;
+pub(crate) mod utilities;
+
+// Test module declarations.
 #[cfg(test)]
 mod test;
 
-
-
-// Re-exports.
-pub use bound::{
-	Bound, 
-	BoundOps,
-};
-pub use interval::{
-	Interval,
-	LeftIterable,
-	RightIterable,
-};
+// Exports.
+pub use bound::Bound;
+pub use interval::Interval;
 pub use selection::Selection;
-pub use parse::*;

@@ -1,255 +1,580 @@
-// The MIT License (MIT)
-// 
-// Copyright (c) 2017 Skylor R. Schermer
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in 
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Copyright 2018 Skylor R. Schermer.
 //
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 ////////////////////////////////////////////////////////////////////////////////
 //!
 //! Provides a bound type for intervals.
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
-// Module imports.
+// Standard library imports.
+use std::borrow::Borrow;
 use std::default::Default;
 
-// Local enum shortcuts.
-use Bound::*;
+// Local enum shortcut.
+use self::Bound::*;
+
 
 ////////////////////////////////////////////////////////////////////////////////
-// Bound<T>
+// Bound
 ////////////////////////////////////////////////////////////////////////////////
-/// Determines the type of an interval's boundary.
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
+/// Determines the type of an [`Interval`]'s boundary point.
+///
+/// [`Interval`]: struct.Interval.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bound<T> {
-    /// The boundary includes the point.
+    /// The bound includes the point.
     Include(T),
-    /// The boundary excludes the point.
+    /// The bound excludes the point.
     Exclude(T),
+    /// The bound does not exist.
+    Infinite,
 }
 
 
 impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
-    /// Constructs a new `Bound` by applying the bound type of the given `from` 
-    /// bound to the given value.
+    ///////////////////////////////////////////////////////////////////////////
+    // Querying the contained values
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Returns `true` if the bound is an [`Include`] or [`Exclude`] value.
+    ///
+    /// [`Include`]: #variant.Include
+    /// [`Exclude`]: #variant.Exclude
     ///
     /// # Example
     ///
     /// ```rust
-    /// use interval::Bound;
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Include(15);
+    /// assert_eq!(x.is_finite(), true);
     ///
-    /// let b1 = Bound::Exclude(35);
-    /// let b2 = Bound::transfer(&b1, 13.56f32);
-    ///
-    /// assert_eq!(b2, Bound::Exclude(13.56f32));
+    /// let x: Bound<i32> = Bound::Infinite;
+    /// assert_eq!(x.is_finite(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
     /// ```
     #[inline]
-    pub fn transfer<O>(from: &Self, to: O) -> Bound<O> {
-        match from {
-            &Include(_) => Include(to),
-            &Exclude(_) => Exclude(to),
+    pub fn is_finite(&self) -> bool {
+        match *self {
+            Infinite => false,
+            _        => true,
         }
     }
-}
 
+    /// Returns `true` if the bound is an [`Include`] value.
+    ///
+    /// [`Include`]: #variant.Include
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Include(15);
+    /// assert_eq!(x.is_inclusive(), true);
+    ///
+    /// let x: Bound<i32> = Bound::Exclude(15);
+    /// assert_eq!(x.is_inclusive(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_inclusive(&self) -> bool {
+        match *self {
+            Include(_) => true,
+            _          => false,
+        }
+    }
 
+    /// Returns `true` if the bound is an [`Exclude`] value.
+    ///
+    /// [`Exclude`]: #variant.Exclude
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Exclude(15);
+    /// assert_eq!(x.is_exclusive(), true);
+    ///
+    /// let x: Bound<i32> = Bound::Include(15);
+    /// assert_eq!(x.is_exclusive(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_exclusive(&self) -> bool {
+        match *self {
+            Exclude(_) => true,
+            _          => false,
+        }
+    }
 
-////////////////////////////////////////////////////////////////////////////////
-// BoundOps
-////////////////////////////////////////////////////////////////////////////////
-/// Provides operations to simplify the computation of interval operations.
-pub trait BoundOps {
+    ///////////////////////////////////////////////////////////////////////////
+    // Adapter for working with references
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Returns a reference to the contained point, or `None` if the bound is 
+    /// [`Infinite`].
+    ///
+    /// [`Infinite`]: #variant.Infinite
+    /// 
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Exclude(34);
+    ///
+    /// assert_eq!(x.as_ref(), Some(&34));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn as_ref(&self) -> Option<&T> {
+        match *self {
+            Include(ref bound) => Some(bound),
+            Exclude(ref bound) => Some(bound),
+            Infinite           => None,
+        }
+    }
+
+    /// Returns a mutable reference to the contained point, or `None` if the
+    /// bound is [`Infinite`].
+    ///
+    /// [`Infinite`]: #variant.Infinite
+    /// 
+    /// 
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut x: Bound<i32> = Bound::Exclude(34);
+    ///
+    /// assert_eq!(x.as_mut(), Some(&mut 34));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn as_mut(&mut self) -> Option<&mut T> {
+        match *self {
+            Include(ref mut bound) => Some(bound),
+            Exclude(ref mut bound) => Some(bound),
+            Infinite               => None,
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Getting to contained values
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Moves the value out of the `Bound<T>` if it is [`Include`] or
+    /// [`Exclude`].
+    ///
+    /// In general, because this function may panic, its use is discouraged.
+    /// Instead, prefer to use pattern matching and handle the [`Infinite`]
+    /// case explicitly.
+    ///
+    /// [`Include`]: #variant.Include
+    /// [`Exclude`]: #variant.Exclude
+    /// [`Infinite`]: #variant.Infinite
+    /// 
+    /// # Panics
+    ///
+    /// Panics if the self value equals [`Infinite`].
+    ///
+    /// [`Infinite`]: #variant.Infinite
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Exclude(34);
+    /// assert_eq!(x.unwrap(), 34);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// ```rust{.should_panic}
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::Infinite;
+    /// assert_eq!(x.unwrap(), 34); // fails
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn unwrap(self) -> T {
+        match self {
+            Include(x) => x,
+            Exclude(x) => x,
+            Infinite
+                => panic!("called `Bound::unwrap()` on an `Infinite` value"),
+        }
+    }
+
+    /// Returns the bound value or a default.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// assert_eq!(Bound::Exclude(34).unwrap_or(15), 34);
+    /// assert_eq!(Bound::Infinite.unwrap_or(15), 15);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn unwrap_or(self, def: T) -> T {
+        match self {
+            Include(x) => x,
+            Exclude(x) => x,
+            Infinite   => def,
+        }
+    }
+
+    /// Returns the bound value or computes it from a closure.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let k = 10;
+    /// assert_eq!(Bound::Exclude(34).unwrap_or_else(|| 2 * k), 34);
+    /// assert_eq!(Bound::Infinite.unwrap_or_else(|| 2 * k), 20);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn unwrap_or_else<F: FnOnce() -> T>(self, f: F) -> T {
+        match self {
+            Include(x) => x,
+            Exclude(x) => x,
+            Infinite   => f(),
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Transforming contained values
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Maps an `Bound<T>` to `Bound<U>` by applying a function to a contained
+    /// value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<u32> = Bound::Include(10);
+    /// let y: Bound<usize> = x.map(|v| v as usize);
+    ///
+    /// assert_eq!(y, Bound::Include(10usize));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Bound<U> {
+        match self {
+            Include(x) => Include(f(x)),
+            Exclude(x) => Exclude(f(x)),
+            Infinite   => Infinite,
+        }
+    }
+
+    /// Applyies a function to a contained value (if finite) or returns a 
+    /// default value (if [`Infinte`]).
+    ///
+    /// [`Infinite`]: #variant.Infinite
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// assert_eq!(Bound::Include(10).map_or(6, |k| k * 2), 20);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn map_or<U, F>(self, def: U, f: F) -> U where F: FnOnce(T) -> U {
+        match self {
+            Include(x) => f(x),
+            Exclude(x) => f(x),
+            Infinite   => def,
+        }
+    }
+
+    /// Applyies a function to a contained value (if finite) or returns a 
+    /// computed value (if [`Infinte`]).
+    ///
+    /// [`Infinite`]: #variant.Infinite
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// assert_eq!(Bound::Include(10).map_or_else(|| 6, |k| k * 2), 20);
+    /// assert_eq!(Bound::Infinite.map_or_else(|| 6, |k: u32| k * 2), 6);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn map_or_else<U, D, F>(self, def: D, f: F) -> U
+        where
+            D: FnOnce() -> U,
+            F: FnOnce(T) -> U
+    {
+        match self {
+            Include(x) => f(x),
+            Exclude(x) => f(x),
+            Infinite   => def(),
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Transfering bound type
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Constructs a new `Bound` by applyting the bound type to the given value.
+    /// 
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let x: Bound<i32> = Bound::transfer(Bound::Exclude(34), 18);
+    ///
+    /// assert_eq!(x, Bound::Exclude(18));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn transfer<B: Borrow<Self>, O>(from: B, to: O) -> Bound<O> {
+        match *from.borrow() {
+            Include(_) => Include(to),
+            Exclude(_) => Exclude(to),
+            Infinite   => Infinite,
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Union and Intersection operators
+    ///////////////////////////////////////////////////////////////////////////
+
     /// Returns the union of the given boundaries, or the lowest one if they are
     /// not at the same point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, BoundOps};
-    ///
-    /// let b1 = Bound::Include(0);
-    /// let b2 = Bound::Exclude(0);
-    /// 
-    /// assert_eq!(b1.least_union(&b2), b1);
-    /// ```
-    fn least_union(&self, other: &Self) -> Self;
-
-    /// Returns the intersect of the given boundaries, or the lowest one if they
-    /// are not at the same point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, BoundOps};
-    ///
-    /// let b1 = Bound::Include(0);
-    /// let b2 = Bound::Exclude(0);
-    /// 
-    /// assert_eq!(b1.least_intersect(&b2), b2);
-    /// ```
-    fn least_intersect(&self, other: &Self) -> Self;
-
-    /// Returns the union of the given boundaries, or the greatest one if they 
-    /// are not at the same point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, BoundOps};
-    ///
-    /// let b1 = Bound::Include(0);
-    /// let b2 = Bound::Exclude(0);
-    /// 
-    /// assert_eq!(b1.greatest_union(&b2), b1);
-    /// ```
-    fn greatest_union(&self, other: &Self) -> Self;
-
-    /// Returns the intersect of the given boundaries, or the greatest one if 
-    /// they are not at the same point.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use interval::{Bound, BoundOps};
-    ///
-    /// let b1 = Bound::Include(0);
-    /// let b2 = Bound::Exclude(0);
-    /// 
-    /// assert_eq!(b1.greatest_intersect(&b2), b2);
-    /// ```
-    fn greatest_intersect(&self, other: &Self) -> Self;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// BoundOps trait impls.
-////////////////////////////////////////////////////////////////////////////////
-// Basic implementation.
-impl<T> BoundOps for Bound<T> where T: PartialOrd + PartialEq + Clone {
-    #[inline]
-    fn least_union(&self, other: &Self) -> Self {
+    pub(crate) fn least_union(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Exclude(ref p), &Exclude(ref o))
-                => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
+            (&Include(ref p), &Include(ref o))
+                => if p < o {Include(p.clone())} else {Include(o.clone())},
+
+            (&Include(ref p), &Exclude(ref o))
+                => if p <= o {Include(p.clone())} else {Exclude(o.clone())},
 
             (&Exclude(ref p), &Include(ref o))
                 => if p < o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
-                => if p < o {Include(p.clone())} else {Include(o.clone())},
-
-            (&Include(ref p), &Include(ref o))
-                => if p < o {Include(p.clone())} else {Include(o.clone())},
-        }
-    }
-    
-    #[inline]
-    fn least_intersect(&self, other: &Self) -> Self {
-        match (self, other) {
             (&Exclude(ref p), &Exclude(ref o))
                 => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
+        
+            _   => Infinite,
+        }
+    }
 
-            (&Exclude(ref p), &Include(ref o))
-                => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
+    /// Returns the intersect of the given boundaries, or the lowest one if they
+    /// are not at the same point.
+    pub(crate) fn least_intersect(&self, other: &Self) -> Self {
+        match (self, other) {
+            (&Include(ref p), &Include(ref o))
+                => if p < o {Include(p.clone())} else {Include(o.clone())},
 
             (&Include(ref p), &Exclude(ref o))
                 => if p < o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Include(ref p), &Include(ref o))
-                => if p < o {Include(p.clone())} else {Include(o.clone())},
+            (&Exclude(ref p), &Include(ref o))
+                => if p <= o {Exclude(p.clone())} else {Include(o.clone())},
+
+            (&Exclude(ref p), &Exclude(ref o))
+                => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
+
+            (&Include(ref p), &Infinite) => Include(p.clone()),
+
+            (&Exclude(ref p), &Infinite) => Exclude(p.clone()),
+            
+            (&Infinite, &Include(ref o)) => Include(o.clone()),
+            
+            (&Infinite, &Exclude(ref o)) => Exclude(o.clone()),
+            
+            _                            => Infinite,
         }
     }
 
-    #[inline]
-    fn greatest_union(&self, other: &Self) -> Self {
+    /// Returns the union of the given boundaries, or the greatest one if they 
+    /// are not at the same point.
+    pub(crate) fn greatest_union(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Exclude(ref p), &Exclude(ref o))
-                => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
+            (&Include(ref p), &Include(ref o))
+                => if p > o {Include(p.clone())} else {Include(o.clone())},
+
+            (&Include(ref p), &Exclude(ref o))
+                => if p >= o {Include(p.clone())} else {Exclude(o.clone())},
 
             (&Exclude(ref p), &Include(ref o))
                 => if p > o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
-                => if p > o {Include(p.clone())} else {Include(o.clone())},
-
-            (&Include(ref p), &Include(ref o))
-                => if p > o {Include(p.clone())} else {Include(o.clone())},
-        }
-    }
-    
-    #[inline]
-    fn greatest_intersect(&self, other: &Self) -> Self {
-        match (self, other) {
             (&Exclude(ref p), &Exclude(ref o))
                 => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
 
-            (&Exclude(ref p), &Include(ref o))
-                => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
+            _   => Infinite,
+        }
+    }
+
+    /// Returns the intersect of the given boundaries, or the greatest one if 
+    /// they are not at the same point.
+    pub(crate) fn greatest_intersect(&self, other: &Self) -> Self {
+        match (self, other) {
+            (&Include(ref p), &Include(ref o))
+                => if p > o {Include(p.clone())} else {Include(o.clone())},
 
             (&Include(ref p), &Exclude(ref o))
                 => if p > o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Include(ref p), &Include(ref o))
-                => if p > o {Include(p.clone())} else {Include(o.clone())},
+            (&Exclude(ref p), &Include(ref o))
+                => if p >= o {Exclude(p.clone())} else {Include(o.clone())},
+
+            (&Exclude(ref p), &Exclude(ref o))
+                => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
+
+            (&Include(ref p), &Infinite) => Include(p.clone()),
+
+            (&Exclude(ref p), &Infinite) => Exclude(p.clone()),
+
+            (&Infinite, &Include(ref o)) => Include(o.clone()),
+
+            (&Infinite, &Exclude(ref o)) => Exclude(o.clone()),
+
+            _                            => Infinite,
+        }
+    }
+
+    /// Returns `true` if the `Bound` points are considered adjacent under a
+    /// union.
+    pub(crate) fn union_adjacent(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&Include(ref p), &Include(ref o)) |
+            (&Include(ref p), &Exclude(ref o)) |
+            (&Exclude(ref p), &Include(ref o)) if p == o => true,
+
+            _   => false,
         }
     }
 }
 
 
-// For simplifying unbounded interval handling.
-impl<T> BoundOps for Option<Bound<T>> where T: PartialOrd + PartialEq + Clone {
-    #[inline]
-    fn least_union(&self, other: &Self) -> Self {
-        match (self, other) {
-            (&Some(ref lb), &Some(ref ub)) => Some(lb.least_union(ub)),
-            _                              => None,
-        }
-    }
-    
-    #[inline]
-    fn least_intersect(&self, other: &Self) -> Self {
-        match (self, other) {
-            (&Some(ref lb), &Some(ref ub)) => Some(lb.least_intersect(ub)),
-            (&Some(ref lb), &None)         => Some(lb.clone()),
-            (&None, &Some(ref ub))         => Some(ub.clone()),
-            _                              => None,
-        }
-    }
-    
-    #[inline]
-    fn greatest_union(&self, other: &Self) -> Self {
-        match (self, other) {
-            (&Some(ref lb), &Some(ref ub)) => Some(lb.greatest_union(ub)),
-            _                              => None,
-        }
-    }
-    
-    #[inline]
-    fn greatest_intersect(&self, other: &Self) -> Self {
-        match (self, other) {
-            (&Some(ref lb), &Some(ref ub)) => Some(lb.greatest_intersect(ub)),
-            (&Some(ref lb), &None)         => Some(lb.clone()),
-            (&None, &Some(ref ub))         => Some(ub.clone()),
-            _                              => None,
-        }
-    }
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -263,32 +588,10 @@ impl<T> Default for Bound<T> where T: Default {
     }
 }
 
-// `Bound`-from-`Point` conversion.
+// `Bound`-from-point conversion.
 impl<T> From<T> for Bound<T> {
     #[inline]
     fn from(t: T) -> Self {
         Include(t)
-    }
-}
-
-// Access to inner point.
-impl<T> AsRef<T> for Bound<T> {
-    #[inline]
-    fn as_ref(&self) -> &T {
-        match *self {
-            Include(ref bound) => bound,
-            Exclude(ref bound) => bound,
-        }
-    }
-}
-
-// Mutable access to inner point.
-impl<T> AsMut<T> for Bound<T> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut T {
-        match *self {
-            Include(ref mut bound) => bound,
-            Exclude(ref mut bound) => bound,
-        }
     }
 }

@@ -1,18 +1,24 @@
 [package]
 name = "interval"
-version = "0.10.4"
+version = "0.12.0" # Remember to update html_root_url.
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
-keywords = ["interval", "selection"]
-description = "Generic interval library"
-license-file = "license.md"
-readme = "readme.md"
-repository = "https://github.com/skyschermer/interval-rs"
-homepage = ""
+description = "Interval library"
+license = "MIT, Apache 2.0"
+readme = "README.md"
+keywords = ["range", "interval", "selection", "set", "span"]
+categories = []
 documentation = ""
+homepage = ""
+repository = "https://github.com/skysch/interval-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
 
 [lib]
 name = "interval"
+
+[features]
+default = ["perforate"]
+perforate = []
+
 
 # The development profile, used for `cargo build`
 [profile.dev]
@@ -21,7 +27,6 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
-codegen-units = 1
 
 # The release profile, used for `cargo build --release`
 [profile.release]
@@ -39,7 +44,6 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
-codegen-units = 1
 
 # The benchmarking profile, used for `cargo bench`
 [profile.bench]
@@ -57,5 +61,4 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
-codegen-units = 1
 

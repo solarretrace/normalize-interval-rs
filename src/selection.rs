@@ -1,1253 +1,896 @@
-// The MIT License (MIT)
-// 
-// Copyright (c) 2017 Skylor R. Schermer
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in 
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Copyright 2018 Skylor R. Schermer.
 //
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 ////////////////////////////////////////////////////////////////////////////////
 //!
-//! Provides a managed collection of intervals.
+//! Provides a set of possibly noncontiguous intervals.
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
 use bound::Bound;
-use interval::{
-	Interval,
-	Normalize,
-	LeftIterable,
-	RightIterable,
-};
+use interval::Interval;
+use raw_interval::RawInterval;
+use tine_tree::TineTree;
+use tine_tree;
+use tine_tree::RawIntervalIter;
+use normalize::Normalize;
 
-// Standard imports.
-use std::collections::btree_set;
-use std::collections::BTreeSet;
-use std::cmp::Ordering;
-use std::fmt;
-
+// Standard library imports.
+use std::iter::FromIterator;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Split
+// Selection<T>
 ////////////////////////////////////////////////////////////////////////////////
-/// A type which may contain zero, one, or two of a value.
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub enum Split<T> {
-	/// No value present.
-	None,
-	/// One value present.
-	One(T),
-	/// Two values present.
-	Two(T, T),
-}
+/// A possibly noncontiguous collection of `Interval`s of the type `T`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Selection<T>(TineTree<T>) where T: PartialOrd + Ord + Clone;
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Selection
-////////////////////////////////////////////////////////////////////////////////
-/// A possibly non-contiguous selection of intervals.
-#[derive(Debug, PartialEq, Clone)]
-pub struct Selection<T>(TineSet<T>) where T: PartialOrd + Ord + Clone;
-
-impl<T> Selection<T> where T: PartialOrd + Ord + Clone {
-	/// Returns an empty `Selection`.
-	pub fn empty() -> Self {
-		Selection(TineSet::new())
-	}
-
-	/// Returns a `Selection` containing all points within the given intervals.
-	pub fn from_intervals<I>(intervals: I) -> Self
-		where I: IntoIterator<Item=Interval<T>>
-	{
-		Selection(TineSet::from_intervals(intervals))
-	}
-
-
-	/// Gets an iterator that returns the `Intervals` in the `Selection` in
-	/// ascending order.
-	pub fn iter(&self) -> Iter<T> {
-		self.0.iter()
-	}
-
-	/// Returns whether the `Selection` is full (i.e., contains all points.)
-	pub fn is_full(&self) -> bool {
-		self.0 == TineSet::from_intervals(Some(Interval::full()))
-	}
-	
-	/// Returns whether the `Selection` is bounded on both sides.
-	pub fn is_bounded(&self) -> bool {
-		self.0.is_bounded()
-	}
-	
-	/// Returns the lower bound of the `Selection`.
-	pub fn lower_bound(&self) -> Option<Bound<T>> {
-		self.0.lower_bound()
-	}
-	
-	/// Returns the upper bound of the `Selection`.
-	pub fn upper_bound(&self) -> Option<Bound<T>> {
-		self.0.upper_bound()
-	}
-
-	/// Returns the greatest lower bound of the `Selection`.
-	pub fn infimum(&self) -> Option<T> {
-		self.0.infimum()
-	}
-
-	/// Returns the least upper bound of the `Selection`.
-	pub fn supremum(&self) -> Option<T> {
-		self.0.supremum()
-	}
-
-	/// Returns the smallest `Interval` containing all of the points in the 
-	/// `Selection`.
-	pub fn enclosing_interval(&self) -> Interval<T> {
-		self.0.enclosing_interval()
-	}
-
-	/// Returns whether the `Interval` contains the given point.
-	pub fn contains(&self, point: &T) -> bool {
-		self.0.contains_pt(point)
-	}
-
-	/// Returns the largest `Selection` whose points are all contained
-	/// entirely within this `Selection` and the given `Selection`.
-	pub fn intersect(&self, other: &Self) -> Self {
-		Selection(self.0.intersect(&other.0))
-	}
-
-	/// Returns a `Selection` containing all of the points contained
-	/// within this `Selection` and the given `Selection`.
-	pub fn union(&self, other: &Self) -> Self {
-		Selection(self.0.union(&other.0))
-	}
-
-	/// Returns a `Selection`s containing all of the points contained
-	/// within this `Selection` that are not in the given `Selection`.
-	pub fn minus(&self, other: &Self) -> Self {
-		Selection(self.0.minus(&other.0))
-	}
-
-	/// Returns a `Selection` containing all of the points not in 
-	/// this `Selection`.
-	pub fn complement(&self) -> Self {
-		Selection(self.0.complement())
-	}
-
-	/// Returns the smallest closed `Selection` containing all of the points in 
-	/// this `Selection`.
-	pub fn closure(&self) -> Self {
-		Selection(self.0.closure())
-	}
-
-	/// Returns whether the `Interval` contains the given point.
-	pub fn contains_interval(&self, interval: &Interval<T>) -> bool {
-		self.0.contains_interval(interval)
-	}
-
-	/// Returns the largest `Selection` whose points are all contained
-	/// entirely within this `Selection` and the given `Selection`.
-	pub fn intersect_interval(&mut self, interval: &Interval<T>) {
-		self.0.intersect_interval(interval)
-	}
-
-	/// Inserts all of the points in the given interval into the `Selection`.
-	pub fn union_interval(&mut self, interval: Interval<T>) {
-		self.0.union_interval(interval);
-	}
-}
-
-
-impl<T> IntoIterator for Selection<T> where T: PartialOrd + Ord + Clone {
-	type Item = Interval<T>;
-    type IntoIter = SelectionIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-    	SelectionIter {
-    		tine_iter: (self.0).0.into_iter(),
-    		saved: None,
-    	}
-    }
-}
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-// TineSet
-////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, PartialEq, Clone)]
-struct TineSet<T>(BTreeSet<Tine<T>>);
-
-impl<T> TineSet<T>
-	where T: PartialOrd + Ord + Clone + NextLower + NextUpper
+// All intervals in the `TineTree` must be denormalized before insert and
+// normalized before return. This ensures proper merging of adjacent normalized
+// intervals.
+impl<T> Selection<T> 
+    where 
+        T: PartialOrd + Ord + Clone,
+        RawInterval<T>: Normalize 
 {
-	/// Constructs an empty `TineSet`.
-	pub fn new() -> Self {
-		TineSet(BTreeSet::new())
-	}
+    ////////////////////////////////////////////////////////////////////////////
+    // Constructors
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /// Constructs a new empty `Selection`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::new();
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn new() -> Self {
+        Selection(TineTree::new())
+    }
 
-	/// Constructs a `TineSet` containing the given `Intervals` unioned
-	/// together.
-	pub fn from_intervals<I>(intervals: I) -> Self
-		where I: IntoIterator<Item=Interval<T>>
-	{
-		let mut dm = TineSet::new();
-		for interval in intervals.into_iter() {
-			dm.union_interval(interval);
-		}
-		dm
-	}
+    ////////////////////////////////////////////////////////////////////////////
+    // Bound accessors
+    ////////////////////////////////////////////////////////////////////////////
 
-	/// Gets an iterator that returns the `Intervals` in the `TineSet` in
-	/// ascending order.
-	pub fn iter(&self) -> Iter<T> {
-		Iter {
-			tine_iter: self.0.iter(),
-			saved:None,
-		}
-	}
+    /// Returns the lower [`Bound`] of the `Selection`, or `None` if the 
+    /// `Selection` is empty.
+    ///
+    /// [`Bound`]: ../bound/enum.Bound.html
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound::*;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// assert_eq!(sel.lower_bound(), Some(Include(-3)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound::*;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// 
+    /// assert_eq!(sel.lower_bound(), Some(Include(-2)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn lower_bound(&self) -> Option<Bound<T>> {
+        self.iter().next().and_then(|i| i.lower_bound())
+    }
+    
+    /// Returns the upper [`Bound`] of the `Selection`, or `None` if the 
+    /// `Selection` is [`empty`].
+    ///
+    /// [`Bound`]: ../bound/enum.Bound.html
+    /// [`empty`]: #method.empty
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound::*;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// assert_eq!(sel.upper_bound(), Some(Include(5)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Bound::*;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// 
+    /// assert_eq!(sel.upper_bound(), Some(Include(4)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn upper_bound(&self) -> Option<Bound<T>> {
+        self.iter().next_back().and_then(|i| i.upper_bound())
+    }
+    
+    /// Returns the greatest lower bound of the `Selection`, or `None` if the
+    /// `Selection` is [`empty`].
+    ///
+    /// [`empty`]: #method.empty
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// assert_eq!(sel.infimum(), Some(-3));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// 
+    /// assert_eq!(sel.infimum(), Some(-3));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn infimum(&self) -> Option<T> {
+        self.0.lower_bound().and_then(|b| b.as_ref().cloned())
+    }
+    
+    
+    /// Returns the least upper bound of the `Interval`, or `None` if the
+    /// `Interval` is [`empty`].
+    ///
+    /// [`empty`]: #method.empty
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// assert_eq!(sel.supremum(), Some(5));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// 
+    /// assert_eq!(sel.supremum(), Some(5));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn supremum(&self) -> Option<T> {
+        self.0.upper_bound().and_then(|b| b.as_ref().cloned())
+    }
 
-	/// Returns whether the `TineSet` is bounded on both sides.
-	pub fn is_bounded(&self) -> bool {
-		let l_unbounded = Tine {
-			point: None,
-			lb: true,
-			ub: false,
-			incl: false,
-		};
-		let u_unbounded = Tine {
-			point: None,
-			lb: true,
-			ub: false,
-			incl: false,
-		};
-		
-		!self.0.contains(&l_unbounded) && !self.0.contains(&u_unbounded)
-	}
+    ////////////////////////////////////////////////////////////////////////////
+    // Query operations
+    ////////////////////////////////////////////////////////////////////////////
 
-	/// Returns the lower bound of the `TineSet`.
-	pub fn lower_bound(&self) -> Option<Bound<T>> {
-		self.0
-			.iter()
-			.next()
-			.cloned()
-			.and_then(Tine::into_bound_lower)
-	}
-	
-	/// Returns the upper bound of the `TineSet`.
-	pub fn upper_bound(&self) -> Option<Bound<T>> {
-		self.0
-			.iter()
-			.rev()
-			.next()
-			.cloned()
-			.and_then(Tine::into_bound_upper)
-	}
+    /// Returns `true` if the interval contains no points.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// assert_eq!(sel.is_empty(), false);
+    ///
+    /// let sel: Selection<i32> = Selection::from(Interval::empty());
+    /// assert_eq!(sel.is_empty(), true);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 
-	/// Returns the greatest lower bound of the `TineSet`.
-	pub fn infimum(&self) -> Option<T> {
-		self.lower_bound().map(|b| b.as_ref().clone())
-	}
+    /// Returns `true` if the the interval is bounded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
+    /// assert_eq!(sel.is_left_bounded(), true);
+    ///
+    /// let sel: Interval<Option<i32>> = Interval::unbounded_to(Some(-3));
+    /// assert_eq!(sel.is_left_bounded(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_bounded(&self) -> bool {
+        self.lower_bound().is_some() || self.upper_bound().is_some()
+    }
 
-	/// Returns the least upper bound of the `TineSet`.
-	pub fn supremum(&self) -> Option<T> {
-		self.upper_bound().map(|b| b.as_ref().clone())
-	}
+    /// Returns `true` if the the `Selection` is left-bounded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<Option<i32>> = Interval::open(Some(-2), Some(4)).into();
+    /// assert_eq!(sel.is_left_bounded(), true);
+    ///
+    /// let sel: Selection<Option<i32>> = Interval::unbounded_to(Some(-3)).into();
+    /// assert_eq!(sel.is_left_bounded(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_left_bounded(&self) -> bool {
+        match self.lower_bound() {
+            Some(Bound::Infinite) => false,
+            _                     => true,
+        }
+    }
 
-	/// Returns the smallest `Interval` containing all of the points in the 
-	/// `TineSet`.
-	pub fn enclosing_interval(&self) -> Interval<T> {
-		Interval::new(self.lower_bound(), self.upper_bound())
-	}
+    
+    /// Returns `true` if the the `Selection` is right-bounded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<Option<i32>> = Interval::open(Some(-2), Some(4)).into();
+    /// assert_eq!(sel.is_right_bounded(), true);
+    ///
+    /// let sel: Selection<Option<i32>> = Interval::unbounded_from(Some(-3)).into();
+    /// assert_eq!(sel.is_right_bounded(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_right_bounded(&self) -> bool {
+        match self.upper_bound() {
+            Some(Bound::Infinite) => false,
+            _                     => true,
+        }
+    }
 
-	/// Returns the largest `TineSet` whose points are all contained
-	/// entirely within this `TineSet` and the given `TineSet`.
-	pub fn intersect(&self, other: &Self) -> Self {
-		let mut a_intervals = self.iter();
-		let mut b_intervals = other.iter();
+    /// Returns `true` if the the `Selection` is helf-bounded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<Option<i32>> = Interval::unbounded_to(Some(-2)).into();
+    /// assert_eq!(sel.is_half_bounded(), true);
+    ///
+    /// let sel: Selection<Option<i32>> = Interval::full().into();
+    /// assert_eq!(sel.is_half_bounded(), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_half_bounded(&self) -> bool {
+        let l = self.is_left_bounded();
+        let r = self.is_right_bounded();
+        (l && !r) || (!l && r)
+    }
 
-		let mut intersection = Self::new();
-		while let Some(a_interval) = a_intervals.next() {
-			'segment: loop {
-				if let Some(b_interval) = b_intervals.next() {
-					let i = a_interval.intersect(&b_interval);
-					if !i.is_empty() {
-						intersection.union_interval(i);
-					} else {
-						// Nothing more overlapping in this segment.
-						break 'segment;
-					}
+    /// Returns `true` if the the `Selection` contains the given point.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(0, 20));
+    /// assert_eq!(sel.contains(&2), true);
+    ///
+    /// assert_eq!(sel.contains(&-15), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn contains(&self, point: &T) -> bool {
+        self.0.contains(point)
+    }
 
-				} else {
-					// Nothing more overlapping anywhere.
-					return intersection;
-				}
-			}
-		}
-		intersection
-	}
+    ////////////////////////////////////////////////////////////////////////////
+    // Set comparisons
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /// Returns `true` if the `Selection` overlaps the given `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(4, 15));
+    /// assert_eq!(a.intersects(&b), true);
+    ///
+    /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(8, 12));
+    /// assert_eq!(a.intersects(&b), false);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn intersects(&self, other: &Self) -> bool {
+        // TODO: Make generic?
+        !self.0.intersect(&other.0).is_empty()
+    }
 
-	/// Returns a `TineSet` containing all of the points contained
-	/// within this `TineSet` and the given `TineSet`.
-	pub fn union(&self, other: &Self) -> Self {
-		let mut union = self.clone();
-		for interval in other.iter() {
-			union.union_interval(interval);
-		}
-		union
-	}
+    ////////////////////////////////////////////////////////////////////////////
+    // Symmetric set operations
+    ////////////////////////////////////////////////////////////////////////////
 
-	/// Returns a `TineSet`s containing all of the points contained
-	/// within this `TineSet` that are not in the given `TineSet`.
-	pub fn minus(&self, other: &Self) -> Self {
-		other.complement()
-			.intersect(self)
-	}
+    /// Returns the `Selection` containing all points in not contained in the
+    /// `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    // /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    // /// 
+    // /// assert_eq!(sel.complement().collect::<Vec<_>>(), 
+    // ///     vec![Interval::unbounded_to(-3), Interval::unbounded_from(5)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use std::i32;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// 
+    /// assert_eq!(sel.complement().iter().collect::<Vec<_>>(), vec![
+    ///     Interval::closed(i32::MIN, -4),
+    ///     Interval::closed(6, i32::MAX),
+    /// ]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn complement(&self) -> Self {
+        Selection(self.0.complement())
+    }
 
-	/// Returns a `TineSet` containing all of the points not in 
-	/// this `TineSet`.
-	pub fn complement(&self) -> Self {
-		TineSet::from(Interval::full()).intersect(self)
-	}
+    /// Returns the `Selection` containing all points in both the given
+    /// `Selection`s.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
+    /// assert_eq!(a.intersect(&b).iter().collect::<Vec<_>>(),
+    ///     vec![Interval::closed(4, 7)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
+    /// let b: Selection<i32> = Selection::from(Interval::open(4, 13));
+    /// assert_eq!(a.intersect(&b).iter().collect::<Vec<_>>(),
+    ///     vec![Interval::closed(5, 6)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn intersect(&self, other: &Self) -> Self {
+        Selection(self.0.intersect(&other.0))
+    }
 
-	/// Returns the smallest closed `TineSet` containing all of the
-	/// points in this `TineSet`.
-	pub fn closure(&self) -> Self {
-		TineSet(self.0
-			.iter()
-			.cloned()
-			.map(|mut tine| {
-				if tine.point.is_some() {
-					tine.incl = true;
-				}
-				tine
-			})
-			.collect()
-		)
-	}
+    /// Returns the `Selection` containing all points in either of the given
+    /// `Selection`s.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
+    /// assert_eq!(a.union(&b).iter().collect::<Vec<_>>(),
+    ///     vec![Interval::closed(-3, 13)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
+    /// let b: Selection<i32> = Selection::from(Interval::open(4, 13));
+    /// assert_eq!(a.union(&b).iter().collect::<Vec<_>>(),
+    ///     vec![Interval::closed(-2, 12)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn union(&self, other: &Self) -> Self {
+        Selection(self.0.union(&other.0))
+    }
 
-	/// Returns whether the `TineSet` contains all of the points in the
-	/// given `Interval`.
-	pub fn contains_interval(&self, interval: &Interval<T>) -> bool {
-		let check = self
-			.intersect(&interval.clone().into())
-			.iter()
-			.next()
-			.map(|ref int| int == interval);
+    /// Returns the `Selection` containing all points in the `Selection` which
+    /// are not in the given `Selection`s.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
+    /// assert_eq!(a.minus(&b).iter().collect::<Vec<_>>(),
+    ///     vec![Interval::right_open(-3, 4)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn minus(&self, other: &Self) -> Self {
+        Selection(self.0.minus(&other.0))
+    }
 
-		check == Some(true)
-	}
+    /// Returns the smallest `Interval` containing all of the points in the 
+    /// `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(9, 13));
+    /// let sel = a.union(&b);
+    ///
+    /// assert_eq!(sel.enclose(), Interval::left_open(-3, 13));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn enclose(&self) -> Interval<T> {
+        Interval(self.0.enclose().normalized())
+    }
 
-	/// 
-	pub fn intersect_interval(&mut self, interval: &Interval<T>) {
-		*self = self.intersect(&interval.clone().into());
-	}
+    /// Returns the smallest closed `Interval` containing all of the points
+    /// in the `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// let b: Selection<i32> = Selection::from(Interval::closed(9, 13));
+    /// let sel = a.union(&b);
+    ///
+    /// assert_eq!(sel.enclose(), Interval::closed(-2, 13));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn closure(&self) -> Interval<T> {
+        Interval(self.0.closure().normalized())
+    }
 
-	/// Inserts the given `Interval` by unioning with the current contents.
-	pub fn union_interval(&mut self, interval: Interval<T>) {
-		if interval.is_empty() {return}
+    ////////////////////////////////////////////////////////////////////////////
+    // In-place operations
+    ////////////////////////////////////////////////////////////////////////////
 
-		let tines = self.widen(Tine::from_interval(interval));
+    /// Reduces the `Selection` to only those points contained in the given
+    /// `Interval`.
+    pub fn intersect_in_place(&mut self, interval: Interval<T>) {
+        self.0.intersect_in_place(&interval.0.denormalized());
+    }
 
-		match tines {
-			Split::None		 => unreachable!(),
-			Split::One(pt)	 => self.union_pt(pt),
-			Split::Two(lb, ub) => self.union_normal(lb, ub),
-		}
-	}
+    /// Adds all of the points in the given `Interval` to the `Selection`.
+    pub fn union_in_place(&mut self, interval: Interval<T>) {
+        self.0.union_in_place(&interval.0.denormalized());
+    }
 
-	/// Returns whether the given point is in the map.
-	pub fn contains_pt(&self, point: &T) -> bool {
-		let lb = Tine {
-			point: Some(point.clone()),
-			lb: true,
-			ub: false,
-			incl: true,
-		};
-		if self.0.contains(&lb) {return true}
-
-		let ub = Tine {
-			point: Some(point.clone()),
-			lb: false,
-			ub: true,
-			incl: true,
-		};
-		if self.0.contains(&ub) {return true}
-
-		let pt = Tine {
-			point: Some(point.clone()),
-			lb: false,
-			ub: false,
-			incl: true,
-		};
-		self.0.contains(&pt)
-	}
-
-	/// Widens the given `Tine` set to encompass neighboring points if their
-	/// `Interval` normalization would include them.
-	fn widen(&self, tines: Split<Tine<T>>) -> Split<Tine<T>> {
-		use self::Split::*;
-		match tines {
-			None		=> None,
-			One(pt)		=> {
-				// Try to widen the point on both sides.
-				let mut lb = pt.clone();
-				lb.ub = false;
-				lb.lb = true;
-
-				let mut ub = pt.clone();
-				ub.ub = true;
-				ub.lb = false;
-				
-				let new_l = self.widen_l(lb);
-				let new_r = self.widen_r(ub);
-
-				if new_l.point == new_r.point {
-					// Widening didn't do anthing.
-					One(pt)
-				} else {
-					// Widening worked, use new tines.
-					Two(new_l, new_r)
-				}
-			}
-			Two(lb, ub) => Two(self.widen_l(lb), self.widen_r(ub)),
-		}
-	}
-
-	/// Widens the given `Tine` to encompass leftward neigbors if its
-	/// `Interval`'s lower bound normalization would include them.
-	fn widen_l(&self, mut tine: Tine<T>) -> Tine<T> {
-		while let Some(lb) = tine.point.clone().and_then(|pt| pt.next_lower()) {
-			if self.contains_pt(&lb) {
-				tine.point = Some(lb);
-			} else {
-				break
-			}
-		}
-		tine
-	}
-
-	/// Widens the given `Tine` to encompass rightward neigbors if its
-	/// `Interval`'s upper bound normalization would include them.
-	fn widen_r(&self, mut tine: Tine<T>) -> Tine<T> {
-		while let Some(ub) = tine.point.clone().and_then(|pt| pt.next_upper()) {
-			if self.contains_pt(&ub) {
-				tine.point = Some(ub);
-			} else {
-				break
-			}
-		}
-		tine
-	}
-
-	/// Inserts a point `Interval` into the map.
-	fn union_pt(&mut self, tine: Tine<T>) {
-		// Should have proper bounds set...
-		debug_assert!(tine.lb);
-		debug_assert!(tine.ub);
-
-		if self.0.is_empty() {
-			self.0.insert(tine);
-			return
-		}
-
-		// Split TineSet.
-		let mut r_set = self.0.split_off(&tine);
-		let before = self.0.iter().next_back().cloned();
-		let after = r_set.iter().next().cloned();
-
-		// Check Tines immediately before (<) and after (>=) the given point...
-		match (before, after) {
-			// Merge the point with the left bound of after if they overlap.
-			(_,			  Some(ref a)) if tine.point == a.point
-				=> if let Some(merged) = tine.merge(a.clone()) {
-					r_set.insert(merged);
-				} else {
-					r_set.remove(&a);
-				},
-			
-			// Point is strictly between two others.
-			(Some(ref b), Some(ref a)) if b.ub && a.lb
-				=> {r_set.insert(tine);},
-
-			// Point is within an existing interval, so do nothing.
-			(Some(_),	  Some(_))
-				=> (),
-
-			// Point is (>) everything, (>) everything, or selection is empty.
-			_	=> {r_set.insert(tine);},
-		};
-
-		self.0.extend(r_set);
-	}
-
-	/// Inserts a non-point, non-empty `Interval` into the map.
-	fn union_normal(&mut self, l_tine: Tine<T>, r_tine: Tine<T>) {
-		// Should have proper bounds set...
-		debug_assert!(l_tine.lb);
-		debug_assert!(r_tine.ub);
-
-		// Early exit for new or full intervals.
-		if self.0.is_empty() 
-			|| (l_tine.point.is_none() && r_tine.point.is_none()) 
-		{
-			self.0 = BTreeSet::new();
-			self.0.insert(l_tine);
-			self.0.insert(r_tine);
-			return
-		}
-
-
-		// Split the TineSet at the left tine.
-		let mut r_set = self.0.split_off(&l_tine);
-		let before = self.0.iter().next_back().cloned();
-
-		// Merge with (=) tine if needed.
-		let l_tine = match r_set.iter().cloned().next() {
-			Some(ref n) if l_tine.point == n.point => {
-				let rl_tine = r_set.take(n).expect("take matched tine");
-				l_tine.merge(rl_tine)
-			}
-			_								 => Some(l_tine), 
-		};
-
-		// Split the TineSet at the right tine.
-		let mut r_set = r_set.split_off(&r_tine);
-
-		// Merge with (=) tine if needed.
-		let r_tine = match r_set.iter().cloned().next() {
-			Some(ref n) if r_tine.point == n.point => {
-				let rr_tine = r_set.take(n).expect("take matched tine");
-				r_tine.merge(rr_tine)
-			}
-			_								 => Some(r_tine), 
-		};
-
-		let after = r_set.iter().next().cloned();
+    /// Removes all of the points in the given `Interval` from the `Selection`.
+    pub fn minus_in_place(&mut self, interval: Interval<T>) {
+        self.0.minus_in_place(&interval.0.denormalized());
+    }
 
 
-		match (l_tine, r_tine) {
-			// Both points are joining intervals.
-			(None, None) => {
-				debug_assert!(before.expect("before join is lower bound").lb);
-				debug_assert!(after.expect("after join is upper bound").ub);
-			},
+    ////////////////////////////////////////////////////////////////////////////
+    // Bulk set operations
+    ////////////////////////////////////////////////////////////////////////////
 
-			// Right point joins two intervals.
-			(Some(lb), None) => {
-				r_set.insert(lb);
-				debug_assert!(after.expect("before join is lower bound").ub);	
-			},
+    ////////////////////////////////////////////////////////////////////////////
+    // Iterator conversions
+    ////////////////////////////////////////////////////////////////////////////
 
-			// Left point joins two intervals.
-			(None, Some(ub)) => {
-				r_set.insert(ub);
-				debug_assert!(before.expect("after join is upper bound").lb);
-			},
-
-			// Neither point joins intervals.
-			(Some(lb), Some(ub)) => {
-				if before.is_none() 
-					|| before.as_ref().map(|b| b.ub) == Some(true)
-					|| (before.map(|b| b.lb) == Some(true) && lb.ub)
-
-				{
-					r_set.insert(lb);
-				}
-				if after.is_none() 
-					|| after.as_ref().map(|a| a.lb) == Some(true) 
-					|| (after.map(|a| a.ub) == Some(true)  && ub.lb)
-				{
-					r_set.insert(ub);
-				}
-
-			}
-		}
-		
-		self.0.extend(r_set);
-	}
-}
-
-impl<T> IntoIterator for TineSet<T> where T: PartialOrd + Ord + Clone {
-	type Item = Interval<T>;
-    type IntoIter = SelectionIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-    	SelectionIter {
-    		tine_iter: self.0.into_iter(),
-    		saved: None,
-    	}
+    /// Returns an iterator over each of the `Interval`s in the `Selection`.
+    pub fn iter(&self) -> IntervalIter<T> {
+        IntervalIter(self.0.iter_intervals())
     }
 }
 
-impl<T> From<Interval<T>> for TineSet<T> where T: PartialOrd + Ord + Clone {
-	fn from(interval: Interval<T>) -> Self {
-		let mut new = Self::new();
-		new.union_interval(interval);
-		new
-	}
+////////////////////////////////////////////////////////////////////////////////
+// Default
+////////////////////////////////////////////////////////////////////////////////
+impl<T> Default for Selection<T> 
+    where T: PartialOrd + Ord + Clone
+{
+    fn default() -> Self {
+        Selection::new()
+    }
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Iter
+// Special iterator traits
 ////////////////////////////////////////////////////////////////////////////////
-/// An iterator over the intervals in the `TineSet`.
-pub struct Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
-	/// The `TineSet` yet to process.
-	tine_iter: btree_set::Iter<'t, Tine<T>>,
-	
-	/// A `Tine` from a previous interval that contains information for the next
-	/// `Interval`.
-	saved: Option<&'t Tine<T>>,
+impl<T> Extend<Interval<T>> for Selection<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn extend<I>(&mut self, iter: I) where I: IntoIterator<Item=Interval<T>> {
+        for interval in iter.into_iter() {
+            let raw = interval.0.denormalized();
+            self.0.union_in_place(&raw);
+        }
+    }
 }
-
-impl<'t, T> Iterator for Iter<'t, T> where T: PartialOrd + Ord + Clone + 't {
-	type Item = Interval<T>;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		if let Some(saved) = self.saved.take() {
-			debug_assert!(saved.lb);
-			let second = self.tine_iter
-				.next()
-				.expect("upper bound matching lower bound");
-			debug_assert!(second.ub);
-			if second.lb {self.saved = Some(second);}
-
-			return Some(Interval::new(
-				Tine::into_bound_lower(saved.clone()),
-				Tine::into_bound_upper(second.clone())));
-
-		}
-		
-		if let Some(first) = self.tine_iter.next() {
-			debug_assert!(first.lb);
-
-			if first.is_point() {
-				return Some(Interval::point(
-					first.clone().point.expect("point tine")
-				));
-			}
-			let second = self.tine_iter.next().expect("upper bound");
-			if second.lb {self.saved = Some(second);}
-
-			Some(Interval::new(
-				Tine::into_bound_lower(first.clone()),
-				Tine::into_bound_upper(second.clone())))
-		} else {
-			None
-		}
-	}
-}
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// SelectionIter
+// Conversion traits
 ////////////////////////////////////////////////////////////////////////////////
-/// An iterator over the intervals in the `Selection`.
-pub struct SelectionIter<T> where T: PartialOrd + Ord + Clone {
-	/// The `Tine` map yet to process.
-	tine_iter: btree_set::IntoIter<Tine<T>>,
-	
-	/// A `Tine` from a previous interval that contains information for the next
-	/// `Interval`.
-	saved: Option<Tine<T>>,
+impl<T> From<Interval<T>> for Selection<T>
+    where
+        T: PartialOrd + Ord + Clone,
+        RawInterval<T>: Normalize 
+{
+    fn from(interval: Interval<T>) -> Self {
+        let raw = interval.0.denormalized();
+        Selection(TineTree::from_raw_interval(raw))
+    }
 }
 
-impl<T> Iterator for SelectionIter<T> where T: PartialOrd + Ord + Clone {
-	type Item = Interval<T>;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		if let Some(saved) = self.saved.take() {
-			debug_assert!(saved.lb);
-			let second = self.tine_iter
-				.next()
-				.expect("upper bound matching lower bound");
-			debug_assert!(second.ub);
-			if second.lb {self.saved = Some(second.clone());}
-
-			return Some(Interval::new(
-				Tine::into_bound_lower(saved),
-				Tine::into_bound_upper(second)));
-
-		}
-		
-		if let Some(first) = self.tine_iter.next() {
-			debug_assert!(first.lb);
-
-			if first.is_point() {
-				return Some(Interval::point(first.point.expect("point tine")));
-			}
-			let second = self.tine_iter.next().expect("upper bound");
-			if second.lb {self.saved = Some(second.clone());}
-
-			Some(Interval::new(
-				Tine::into_bound_lower(first),
-				Tine::into_bound_upper(second)))
-		} else {
-			None
-		}
-	}
+impl<T> FromIterator<Interval<T>> for Selection<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn from_iter<I>(iter: I) -> Self where I: IntoIterator<Item=Interval<T>> {
+        let mut selection = Selection::new();
+        for interval in iter.into_iter() {
+            let raw = interval.0.denormalized();
+            selection.0.union_in_place(&raw);
+        }
+        selection
+    }
 }
 
+impl<T> IntoIterator for Selection<T>
+    where T: PartialOrd + Ord + Clone 
+{
+    type Item = Interval<T>;
+    type IntoIter = IntoIter<T>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter(self.0.into_iter())
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Tine
+// IntoIter
 ////////////////////////////////////////////////////////////////////////////////
-/// A portion of an interval.
-///
-/// Tines are used to implement ordering over the interval bounds in such a way
-/// that the `BTreeSet` will always be able to split at the appropriate place
-/// for a given bound type.
-///
-/// Tines representing point intervals are neither upper bounds nor lower
-/// bounds.
-#[derive(Debug, PartialEq, Clone)]
-struct Tine<T> {
-	/// The point of the `Tine`.
-	pub point: Option<T>,
-	/// Whether the `Tine` represents the upper bound of an interval.
-	pub lb: bool,
-	/// Whether the `Tine` represents the lower bound of an interval.
-	pub ub: bool,
-	/// Whether the `Tine` point is included in the interval.
-	pub incl: bool,
+/// An owning `Iterator` over the `Interval`s of a `Selection`.
+pub struct IntoIter<T>(tine_tree::IntoIter<T>);
+
+impl<T> Iterator for IntoIter<T>
+    where T: PartialOrd + Ord + Clone
+{
+    type Item = Interval<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+            .next()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+    }
 }
 
-
-impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
-	/// Returns whether the `Tine` represents a point interval.
-	pub fn is_point(&self) -> bool {
-		!self.lb && !self.ub && self.incl && self.point.is_some()
-	}
-
-	/// Returns the set of `Tine`s representing the given interval.
-	pub fn from_interval(interval: Interval<T>) -> Split<Self> {
-		if interval.is_empty() {
-			Split::None
-		} else if interval.is_degenerate() {
-			Split::One(Self::from_degenerate_interval(interval))
-		} else {
-			let (lb, ub) = Self::from_nondegenerate_interval(interval);
-			Split::Two(lb, ub)
-		}
-	}
-
-	/// Returns the `Tine` representing a point interval.
-	fn from_degenerate_interval(mut interval: Interval<T>) -> Self {
-		interval.normalize();
-		debug_assert!(!interval.is_empty());
-		debug_assert!(interval.is_degenerate());
-		Tine {
-			point: interval.infimum(),
-			lb: true,
-			ub: true,
-			incl: true,
-		}
-	}
-
-	/// Returns the `Tine` representing a non-empty, non-point interval.
-	fn from_nondegenerate_interval(mut interval: Interval<T>)
-		-> (Self, Self)
-	{
-		interval.normalize();
-		debug_assert!(!interval.is_empty());
-		debug_assert!(!interval.is_degenerate());
-		let left = Tine {
-			point: interval.infimum(),
-			lb: true,
-			ub: false,
-			incl: !interval.is_left_open(),
-		};
-		let right = Tine {
-			point: interval.supremum(),
-			lb: false,
-			ub: true,
-			incl: !interval.is_right_open(),
-		};
-		(left, right)
-	}
-
-	/// Combines two `Tine`s by 'or'ing their flags.
-	pub fn merge(self, other: Self) -> Option<Self> {
-		debug_assert!(self.point == other.point);
-		debug_assert!(self.point.is_some()
-			|| other.point.is_some() 
-			|| (self.point.is_none() 
-				&& other.point.is_none()
-				&& self.lb == other.lb 
-				&& self.ub == other.ub));
-
-		let merged = Tine {
-			lb: self.lb || other.lb,
-			ub: self.ub || other.ub,
-			incl: self.incl || other.incl,
-			point: self.point,
-		};
-
-		if merged.lb && merged.ub && merged.incl {
-			// New tine is merging 2 or more intervals.
-			None
-		} else {
-			Some(merged)
-		}
-	}
-
-	/// Converts a `Tine` into a lower `Bound`.
-	pub fn into_bound_lower(lb: Self) -> Option<Bound<T>> {
-		debug_assert!(lb.lb);
-		if lb.point.is_none() {
-			return None;
-		}
-		match lb.incl {
-			true => Some(Bound::Include(lb.point.expect("bounded tine"))),
-			false => Some(Bound::Exclude(lb.point.expect("bounded tine"))),
-		}
-	}
-
-	/// Converts a `Tine` into an upper `Bound`.
-	pub fn into_bound_upper(ub: Self) -> Option<Bound<T>> {
-		debug_assert!(ub.ub);
-		if ub.point.is_none() {
-			return None;
-		}
-		match ub.incl {
-			true => Some(Bound::Include(ub.point.expect("bounded tine"))),
-			false => Some(Bound::Exclude(ub.point.expect("bounded tine"))),
-		}
-	}
+impl<T> DoubleEndedIterator for IntoIter<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0
+            .next_back()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+    }
 }
-
-
-impl<T> Eq for Tine<T> where T: PartialOrd + Ord + Clone {}
-
-impl<T> PartialOrd for Tine<T> where T: PartialOrd + Ord + Clone {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
-	}
-}
-
-// Tine ordering is total.
-impl<T> Ord for Tine<T> where T: PartialOrd + Ord + Clone {
-	fn cmp(&self, other: &Self) -> Ordering {
-		match (&self.point, &other.point) {
-			// Tine points will compare directly.
-			(&Some(ref a), &Some(ref b))
-				=> a.cmp(&b),
-
-			// Unbounded tines compare to bounded depending on the direction.
-			(&None, &Some(_))
-				=> if self.lb {Ordering::Less} else {Ordering::Greater},
-
-			(&Some(_), &None)
-				=> if other.lb {Ordering::Greater} else {Ordering::Less},
-
-			// Unbounded tines compare to unbounded depending on the direction.
-			_
-				=> match (self.lb, self.ub, other.lb, other.ub) {
-					(true, false, true, false) |
-					(false, true, false, true) => Ordering::Equal,
-					(true, false, false, true) => Ordering::Less,
-					(false, true, true, false) => Ordering::Greater,
-					_						   => panic!("invalid Tine"),
-				}
-		}
-	}
-}
-
-
-impl<T> fmt::Display for Tine<T> where T: fmt::Debug {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{}-{:?}", 
-			match (self.lb, self.incl, self.ub) {
-				(true, false, false)  => "(",  // Lower bound exclusive.
-				(true, true, false)	  => "[",  // Lower bound inclusive.
-				(true, true, true)	  => "[]", // Overlapping inclusive bounds.
-				(true, false, true)	  => ")(", // Overlapping exclusive bounds.
-				(false, false, true)  => ")",  // Upper bound exclusive.
-				(false, true, true)	  => "]",  // Upper bound inclusive.
-				(false, true, false)  => "|",  // Point bound.
-				(false, false, false) => unreachable!(), // Invalid tine.
-			},
-			self.point)
-	}
-}
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Unification traits
+// IntervalIter
 ////////////////////////////////////////////////////////////////////////////////
-/// Provides a method for getting the next lower point from the given point.
-pub trait NextLower: Sized {
-	/// Returns the next point less than the given point.
-	fn next_lower(&self) -> Option<Self>;
-}
+/// An `Iterator` over the `Interval`s of a `Selection`.
+pub struct IntervalIter<'t, T: 't>(RawIntervalIter<'t, T>)
+    where T: PartialOrd + Ord + Clone;
 
-/// Provides a method for getting the next upper point from the given point.
-pub trait NextUpper: Sized {
-	/// Returns the next point greater than the given point.
-	fn next_upper(&self) -> Option<Self>;
-}
+impl<'t, T> Iterator for IntervalIter<'t, T> 
+    where T: PartialOrd + Ord + Clone
+{
+    type Item = Interval<T>;
 
-// Default implementation to be overridden by normalizeable types.
-impl<T> NextLower for T {
-	default fn next_lower(&self) -> Option<Self> {None}
-}
-
-// Default implementation to be overridden by normalizeable types.
-impl<T> NextUpper for T {
-	default fn next_upper(&self) -> Option<Self> {None}
-}
-
-// Override of default for RightIterable types.
-impl<T> NextLower for T where T: RightIterable {
-	fn next_lower(&self) -> Option<Self> {
-		self.pred()
-	}
-}
-
-// Override of default for LeftIterable types.
-impl<T> NextUpper for T where T: LeftIterable {
-	fn next_upper(&self) -> Option<Self> {
-		self.succ()
-	}
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+            .next()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+    }
 }
 
 
-
-
-
-#[cfg(test)]
-mod tests {
-	use ::interval::Interval;
-	use super::*;
-
-
-	#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
-	struct Opaque(i32);
-
-	#[test]
-	fn tine_set_insert_disjoint() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(20), Opaque(25));
-		let c = Interval::open(Opaque(30), Opaque(35));
-		dm.union_interval(b.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![a, b, c]);
-	}
-
-	#[test]
-	fn tine_set_insert_disjoint_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(20, 25);
-		let c = Interval::open(30, 35);
-		dm.union_interval(b.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![a, b, c]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(20), Opaque(25));
-		let c = Interval::open(Opaque(14), Opaque(26));
-		dm.union_interval(b.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(26))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(20, 25);
-		let c = Interval::open(14, 26);
-		dm.union_interval(b.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(0, 26)]);
-	}
-
-	#[test]
-	fn tine_set_insert_disjoint_close() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(15), Opaque(25));
-		let c = Interval::open(Opaque(25), Opaque(30));
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![a, b, c]);
-	}
-
-	#[test]
-	fn tine_set_insert_disjoint_close_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(15, 25);
-		let c = Interval::open(25, 30);
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![a, b, c]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_close() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::closed(Opaque(15), Opaque(25));
-		let c = Interval::open(Opaque(25), Opaque(30));
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_close_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::closed(15, 25);
-		let c = Interval::open(25, 30);
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(0, 30)]);
-	}
-
-	#[test]
-	fn tine_set_insert_disjoint_point() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(15), Opaque(25));
-		let c = Interval::point(Opaque(15));
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
-	}
-
-	#[test]
-	fn tine_set_insert_disjoint_point_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(15, 25);
-		let c = Interval::point(15);
-		dm.union_interval(c.clone());
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(0, 25)]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_exact() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(15), Opaque(25));
-		let c = Interval::open(Opaque(0), Opaque(25));
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(25))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_exact_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(15, 25);
-		let c = Interval::open(0, 25);
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(0, 25)]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_widen() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(15));
-		let b = Interval::open(Opaque(15), Opaque(25));
-		let c = Interval::closed(Opaque(0), Opaque(25));
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::closed(Opaque(0), Opaque(25))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_widen_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 15);
-		let b = Interval::open(15, 25);
-		let c = Interval::closed(0, 25);
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::closed(0, 25)]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_point() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::open(Opaque(0), Opaque(30));
-		let b = Interval::point(Opaque(15));
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(Opaque(0), Opaque(30))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_point_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::open(0, 30);
-		let b = Interval::point(15);
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::open(0, 30)]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_unbounded() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::from(Opaque(10));
-		let b = Interval::open(Opaque(15), Opaque(30));
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::from(Opaque(10))]);
-	}
-
-	#[test]
-	fn tine_set_insert_overlap_unbounded_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::from(10);
-		let b = Interval::open(15, 30);
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::from(10)]);
-	}
-
-	#[test]
-	fn tine_set_insert_units() {
-		let mut dm: TineSet<Opaque> = TineSet::new();
-
-		let a = Interval::point(Opaque(10));
-		let b = Interval::point(Opaque(11));
-		let c = Interval::point(Opaque(12));
-		let d = Interval::point(Opaque(13));
-		let e = Interval::point(Opaque(14));
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(c.clone());
-		dm.union_interval(d.clone());
-		dm.union_interval(e.clone());
-
-		let dm_res: Vec<Interval<Opaque>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![
-			Interval::point(Opaque(10)),
-			Interval::point(Opaque(11)),
-			Interval::point(Opaque(12)),
-			Interval::point(Opaque(13)),
-			Interval::point(Opaque(14)),
-		]);
-	}
-
-	#[test]
-	fn tine_set_insert_units_normalized() {
-		let mut dm: TineSet<i32> = TineSet::new();
-
-		let a = Interval::point(10);
-		let b = Interval::point(11);
-		let c = Interval::point(12);
-		let d = Interval::point(13);
-		let e = Interval::point(14);
-		dm.union_interval(a.clone());
-		dm.union_interval(b.clone());
-		dm.union_interval(d.clone());
-		dm.union_interval(e.clone());
-		dm.union_interval(c.clone());
-
-		let dm_res: Vec<Interval<i32>> = dm.into_iter().collect();
-		assert_eq!(dm_res, vec![Interval::closed(10, 14)]);
-	}
+impl<'t, T> DoubleEndedIterator for IntervalIter<'t, T> 
+    where T: PartialOrd + Ord + Clone
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0
+            .next_back()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+    }
 }
+
