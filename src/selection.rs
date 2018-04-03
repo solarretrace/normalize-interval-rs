@@ -736,24 +736,157 @@ impl<T> Selection<T>
 
     /// Reduces the `Selection` to only those points contained in the given
     /// `Interval`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// sel.intersect_in_place(Interval::open(2, 5));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::open(2, 5)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// sel.intersect_in_place(Interval::open(2, 5));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::closed(3, 4)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
     pub fn intersect_in_place(&mut self, interval: Interval<T>) {
         self.0.intersect_in_place(&interval.0.denormalized());
     }
 
     /// Adds all of the points in the given `Interval` to the `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// sel.union_in_place(Interval::open(12, 15));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::closed(-3, 7), Interval::open(12, 15)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::open(-3, 8));
+    /// sel.union_in_place(Interval::open(7, 10));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::closed(-2, 9)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
     pub fn union_in_place(&mut self, interval: Interval<T>) {
         self.0.union_in_place(&interval.0.denormalized());
     }
 
     /// Removes all of the points in the given `Interval` from the `Selection`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// sel.minus_in_place(Interval::open(2, 5));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::closed(-3, 2), Interval::closed(5, 7)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
+    /// sel.minus_in_place(Interval::closed(2, 5));
+    ///
+    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    ///     [Interval::closed(-3, 1), Interval::closed(6, 7)]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
     pub fn minus_in_place(&mut self, interval: Interval<T>) {
         self.0.minus_in_place(&interval.0.denormalized());
     }
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    // Bulk set operations
-    ////////////////////////////////////////////////////////////////////////////
 
     ////////////////////////////////////////////////////////////////////////////
     // Iterator conversions
