@@ -1,36 +1,21 @@
+Overview
+========
 
-interval-rs
-===========
+This library (Interval) provides an implementation of range and interval types as an alternative to the std library's Range and related types. The reasoning for this alternative is that Interval provides machinery for the normalization of (finite) intervals. This reduces ambiguity and enhances analysis of finite types.
 
-An experimental "normalizing" interval library.
+Usage
+=====
 
+Add this line to your crate's Cargo.toml file:
 
-Design features:
+interval = "0.12.1"
 
-+ Closure: An `Interval` will automatically have its bounds rewritten to conform to finite or countable type specifications.
+What is interval normalization?
+===============================
 
-+ Iteration: An `Interval` can alternate between normalized and denormalized forms to provide left and right iterators over its interior.
+Interval normalization ensures that equivalent intervals have the same representation. For instance, if we have an Interval<i32> covering (0, 15], the left bound is exclusive, and due to the finiteness of i32, the interval will be equivalent to [1, 15]. In this way, intervals over finite types can always be 'normalized' as closed finite intervals. Additionally, unions of nearby intervals my overlap if denormalized. [0, 4] union [5, 6] selects the same points as [0, 6], even though the intervals do not share bounds. Thus we also have to normalize intervals with respect to set operations.
 
-+ Widening: An `Interval` can be unioned with with an interval with different boundary points if the closure of those boundaries would overlap. 
+How is interval normalization achieved?
+======================================
 
-The closure and unification features are provided by the Normalize trait, which is blanket implemented for all Intervals. We use specialization to override the default 'do nothing' behavior.
-
-The iteration feature is provided by the LeftIterable and RightIterable trait. These traits are implemented on the iterator's elements and used to treat the intervals as consuming iterators.
-
-The widening feature is also provided by the LeftIterable and RightIterable traits, but through the NextUpper and NextLower traits, respectively.
-
-
-
-
-Normalization Traits
-====================
-
-
-LeftIterable: Clone
-RightIterable: Clone
-
-Normalize: Sized
-
-NextLower: Sized
-NextUpper: Sized
-
+Interval<T> is implemented as a normalizing wrapper around RawInterval<T>. Any type which implements Normalize will be automatically normalized after any operation performed on Interval<T>. Dynamic unions of intervals are implemented through Selection<T>, which is a normalizing wrapper around TineTree<T>, which ensures that interval operations are performed on the broadest 'denormalized' set of intervals possible before normalization occurs.
