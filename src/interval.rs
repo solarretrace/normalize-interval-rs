@@ -1981,3 +1981,11 @@ impl<T> convert::From<RawInterval<T>> for Interval<T>
         Interval(raw_interval.normalized())
     }
 }
+
+impl<T> convert::From<T> for Interval<T> 
+    where T: PartialOrd + Ord + Clone
+{
+    fn from(point: T) -> Self {
+        Interval(RawInterval::Point(point).normalized())
+    }
+}

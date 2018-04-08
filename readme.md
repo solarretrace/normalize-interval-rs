@@ -8,7 +8,7 @@ Usage
 
 Add this line to your crate's Cargo.toml file:
 
-interval = "0.12.2"
+interval = "0.12.3"
 
 
 What is interval normalization?
