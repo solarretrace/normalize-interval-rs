@@ -14,6 +14,7 @@
 // Local imports.
 use bound::Bound;
 use raw_interval::RawInterval;
+use normalize::Finite;
 use normalize::Normalize;
 #[cfg(feature = "perforate")]
 use perforate::Perforate;
@@ -1962,13 +1963,6 @@ impl<T> Interval<T>
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Perforation support
-////////////////////////////////////////////////////////////////////////////////
-#[cfg(feature = "perforate")]
-impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Perforate {
-
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Conversion traits
@@ -1988,4 +1982,105 @@ impl<T> convert::From<T> for Interval<T>
     fn from(point: T) -> Self {
         Interval(RawInterval::Point(point).normalized())
     }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Finite iteration support
+////////////////////////////////////////////////////////////////////////////////
+impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Finite {
+    /// Returns an `Iterator` over the points in the `Interval`. Only defined
+    /// for `Finite` `Interval`s.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::open(3, 7);
+    /// assert_eq!(interval.iter().collect::<Vec<_>>(), [4, 5, 6]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// The `Interval` can be iterated in both directions.
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::open(3, 7);
+    /// assert_eq!(interval.iter().rev().collect::<Vec<_>>(), [6, 5, 4]);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    pub fn iter(&self) -> Iter<T> {
+        Iter {
+            inner: self.clone(),
+        }
+    }
+}
+
+/// An `Iterator` over the points in an `Interval`.
+pub struct Iter<T> where T: PartialOrd + Ord + Clone {
+    /// The `Interval` being iterated over.
+    inner: Interval<T>,
+}
+
+impl<T> Iterator for Iter<T>
+    where T: PartialOrd + Ord + Clone + Finite
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner.lower_bound() {
+            Some(Bound::Include(lb)) => {
+                self.inner = self.inner
+                    .minus(&lb.clone().into())
+                    .next()
+                    .unwrap_or(Interval::empty());
+                Some(lb)
+            },
+            None => None,
+            _ => unreachable!("iter for Finite interval with open lower bound"),
+        }
+    }
+}
+
+impl<T> DoubleEndedIterator for Iter<T>
+    where T: PartialOrd + Ord + Clone + Finite
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self.inner.upper_bound() {
+            Some(Bound::Include(ub)) => {
+                self.inner = self.inner
+                    .minus(&ub.clone().into())
+                    .next()
+                    .unwrap_or(Interval::empty());
+                Some(ub)
+            },
+            None => None,
+            _ => unreachable!("iter for Finite interval with open upper bound"),
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Perforation support
+////////////////////////////////////////////////////////////////////////////////
+#[cfg(feature = "perforate")]
+impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Perforate {
 }
