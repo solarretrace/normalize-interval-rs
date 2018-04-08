@@ -66,6 +66,37 @@ impl<T> Selection<T>
         Selection(TineTree::new())
     }
 
+    /// Constructs a new empty `Selection`.
+    #[inline]
+    pub fn empty() -> Self {
+        Selection::new()
+    }
+
+    /// Constructs a new full `Selection`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::full();
+    ///
+    /// 
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn full() -> Self {
+        Interval::full().into()
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
@@ -306,6 +337,34 @@ impl<T> Selection<T>
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Returns `true` if the interval contains all points.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use interval::Interval;
+    /// # use interval::Selection;
+    /// # fn example() -> Result<(), Box<Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
+    /// assert_eq!(sel.is_full(), false);
+    ///
+    /// let sel: Selection<i32> = Selection::from(Interval::full());
+    /// assert_eq!(sel.is_full(), true);
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     example().unwrap();
+    /// # }
+    /// ```
+    #[inline]
+    pub fn is_full(&self) -> bool {
+        self.0.is_full()
     }
 
     /// Returns `true` if the the interval is bounded.

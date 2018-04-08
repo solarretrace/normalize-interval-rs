@@ -90,6 +90,13 @@ impl<T> TineTree<T> where T: Ord + Clone {
         self.0.is_empty()
     }
 
+    /// Returns `true` if the `TineTree` is full.
+    pub fn is_full(&self) -> bool {
+        self.0.iter().collect::<Vec<_>>() == [
+            &Tine::Lower(Bound::Infinite),
+            &Tine::Upper(Bound::Infinite)]
+    }
+
     /// Returns `true` if the `TineTree` contains the given point.
     pub fn contains(&self, point: &T) -> bool {
         for interval in self.iter_intervals() {
