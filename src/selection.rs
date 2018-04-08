@@ -28,7 +28,7 @@ use std::iter::FromIterator;
 // Selection<T>
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly noncontiguous collection of `Interval`s of the type `T`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Selection<T>(TineTree<T>) where T: PartialOrd + Ord + Clone;
 
 // All intervals in the `TineTree` must be denormalized before insert and

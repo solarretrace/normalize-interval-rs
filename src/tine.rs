@@ -33,7 +33,7 @@ use self::Tine::*;
 /// Tines are used to implement ordering over the interval bounds in such a way
 /// that the `TineTree` will always be able to split at the appropriate place
 /// for a given bound type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Tine<T> {
     /// The lower `Bound` of an `Interval`.
     Lower(Bound<T>),

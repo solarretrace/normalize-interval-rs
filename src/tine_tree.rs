@@ -44,7 +44,7 @@ use bound::Bound::*;
 /// [`Tine`]: tine_tree/struct.Tine.html
 /// [`Interval`]: interval/struct.Interval.html
 ///
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct TineTree<T>(BTreeSet<Tine<T>>) where T: Ord + Clone;
 
 impl<T> TineTree<T> where T: Ord + Clone {
