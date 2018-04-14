@@ -10,7 +10,7 @@
 //! Provides a basic bounded interval type for doing complex set selections.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-#![doc(html_root_url = "https://docs.rs/interval/0.12.4")]
+#![doc(html_root_url = "https://docs.rs/interval/0.12.5")]
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
 #![warn(missing_docs)]
@@ -20,8 +20,6 @@ pub mod bound;
 pub mod interval;
 pub mod normalize;
 pub mod selection;
-#[cfg(feature = "perforate")]
-pub mod perforate;
 
 // Internal modules.
 pub(crate) mod raw_interval;
