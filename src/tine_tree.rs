@@ -99,6 +99,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns `true` if the `TineTree` contains the given point.
     pub fn contains(&self, point: &T) -> bool {
+        // TODO(Sky): Could be optimized by splitting the tree and looking around.
         for interval in self.iter_intervals() {
             if interval.contains(point) {return true;}
         }
@@ -138,7 +139,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         // Get first and last to handle infinite bounds.
         match tine_iter.next() {
             Some(&Lower(Infinite)) => {/* Do Nothing. */},
-            Some(tine)            => {
+            Some(tine)             => {
                 complement.0.insert(Lower(Infinite));
                 complement.0.insert(tine.clone().invert());
             },
@@ -146,7 +147,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         }
         match tine_iter.next_back() {
             Some(&Upper(Infinite)) => {/* Do Nothing. */},
-            Some(tine)            => {
+            Some(tine)             => {
                 complement.0.insert(Upper(Infinite));
                 complement.0.insert(tine.clone().invert());
             },
@@ -175,12 +176,12 @@ impl<T> TineTree<T> where T: Ord + Clone {
                     if !i.is_empty() {
                         intersection.union_in_place(&i);
                     } else {
-                        // Nothing more overlapping in this segment.
+                        // Nothing else overlaps in this segment.
                         break 'segment;
                     }
 
                 } else {
-                    // Nothing more overlapping anywhere.
+                    // Nothing else overlaps anywhere.
                     return intersection;
                 }
             }
@@ -188,7 +189,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         intersection
     }
 
-    /// Returns a `TineTree` containing all points in present in either of the 
+    /// Returns a `TineTree` containing all points present in either of the 
     /// `TineTree`s.
     pub fn union(&self, other: &Self) -> Self {
         let mut union = self.clone();
