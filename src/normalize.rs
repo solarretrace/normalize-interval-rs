@@ -164,8 +164,8 @@ macro_rules! std_integer_finite_impl {
 
 // Provide implementations of Finite for builtin integer types.
 std_integer_finite_impl![
-    u8, u16, u32, u64, usize,
-    i8, i16, i32, i64, isize
+    u8, u16, u32, u64, u128, usize,
+    i8, i16, i32, i64, i128, isize
 ];
 
 
