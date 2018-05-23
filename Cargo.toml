@@ -49,12 +49,3 @@ rpath = false
 lto = false
 debug-assertions = false
 codegen-units = 1
-
-# The documentation profile, used for `cargo doc`
-[profile.doc]
-opt-level = 0
-debug = true
-rpath = false
-lto = false
-debug-assertions = true
-

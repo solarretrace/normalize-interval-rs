@@ -14,11 +14,11 @@
 // Local imports.
 use bound::Bound;
 use interval::Interval;
+use normalize::Normalize;
 use raw_interval::RawInterval;
+use tine_tree::RawIntervalIter;
 use tine_tree::TineTree;
 use tine_tree;
-use tine_tree::RawIntervalIter;
-use normalize::Normalize;
 
 // Standard library imports.
 use std::iter::FromIterator;

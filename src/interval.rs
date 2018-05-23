@@ -13,9 +13,9 @@
 
 // Local imports.
 use bound::Bound;
-use raw_interval::RawInterval;
 use normalize::Finite;
 use normalize::Normalize;
+use raw_interval::RawInterval;
 
 // Standard library imports.
 use std::convert;

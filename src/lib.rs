@@ -12,7 +12,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #![doc(html_root_url = "https://docs.rs/interval/0.12.5")]
 #![feature(specialization)]
-#![feature(conservative_impl_trait)]
 #![warn(missing_docs)]
 
 // Public modules.
