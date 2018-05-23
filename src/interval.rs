@@ -16,8 +16,6 @@ use bound::Bound;
 use raw_interval::RawInterval;
 use normalize::Finite;
 use normalize::Normalize;
-#[cfg(feature = "perforate")]
-use perforate::Perforate;
 
 // Standard library imports.
 use std::convert;
@@ -2076,11 +2074,4 @@ impl<T> DoubleEndedIterator for Iter<T>
             _ => unreachable!("iter for Finite interval with open upper bound"),
         }
     }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Perforation support
-////////////////////////////////////////////////////////////////////////////////
-#[cfg(feature = "perforate")]
-impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Perforate {
 }
