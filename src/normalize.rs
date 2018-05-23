@@ -84,8 +84,6 @@ impl<T> Normalize for RawInterval<T> {
 /// Specialization for [`Finite`] intervals.
 impl<T> Normalize for RawInterval<T> where T: Finite {
     default fn normalize(&mut self) {
-        let (min, max) = (T::minimum(), T::maximum());
-
         *self = match mem::replace(self, Empty) {
             Empty           => Empty,
             Point(p)        => Point(p),
@@ -96,11 +94,11 @@ impl<T> Normalize for RawInterval<T> where T: Finite {
             LeftOpen(l, r)  => l.succ().map_or(Empty, |l| Closed(l, r)),
             RightOpen(l, r) => r.pred().map_or(Empty, |r| Closed(l, r)),
             Closed(l, r)    => Closed(l, r),
-            UpTo(r)         => r.pred().map_or(Empty, |r| Closed(min, r)),
-            UpFrom(l)       => l.succ().map_or(Empty, |l| Closed(l, max)),
-            To(p)           => Closed(min, p),
-            From(p)         => Closed(p, max),
-            Full            => Closed(min, max),
+            UpTo(r)         => r.pred().map_or(Empty, |r| Closed(T::minimum(), r)),
+            UpFrom(l)       => l.succ().map_or(Empty, |l| Closed(l, T::maximum())),
+            To(p)           => Closed(T::minimum(), p),
+            From(p)         => Closed(p, T::maximum()),
+            Full            => Closed(T::minimum(), T::maximum()),
         }
     }
 
