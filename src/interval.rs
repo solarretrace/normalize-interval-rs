@@ -891,7 +891,7 @@ impl<T> Interval<T>
     }
     
     /// Returns the greatest lower bound of the `Interval`, or `None` if the
-    /// `Interval` is [`empty`].
+    /// `Interval` is [`empty`] or unbounded below.
     ///
     /// [`empty`]: #method.empty
     ///
@@ -934,7 +934,7 @@ impl<T> Interval<T>
     
     
     /// Returns the least upper bound of the `Interval`, or `None` if the
-    /// `Interval` is [`empty`].
+    /// `Interval` is [`empty`] or unbounded above.
     ///
     /// [`empty`]: #method.empty
     ///
@@ -975,7 +975,8 @@ impl<T> Interval<T>
         self.0.supremum()
     }
 
-    /// Returns the size of the `Interval`, or `None` if it is infinite.
+    /// Returns the size of the `Interval`, or `None` if it is either infinite
+    /// or empty.
     ///
     /// # Example
     ///
