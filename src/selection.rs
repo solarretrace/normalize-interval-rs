@@ -50,15 +50,12 @@ impl<T> Selection<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::new();
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -79,6 +76,7 @@ impl<T> Selection<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::full();
@@ -86,10 +84,6 @@ impl<T> Selection<T>
     /// 
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -113,16 +107,13 @@ impl<T> Selection<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
     /// assert_eq!(sel.lower_bound(), Some(Include(-3)));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -135,6 +126,7 @@ impl<T> Selection<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -142,10 +134,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.lower_bound(), Some(Include(-2)));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -166,16 +154,13 @@ impl<T> Selection<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
     /// assert_eq!(sel.upper_bound(), Some(Include(5)));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -188,6 +173,7 @@ impl<T> Selection<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -195,10 +181,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.upper_bound(), Some(Include(4)));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -217,16 +199,13 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
     /// assert_eq!(sel.infimum(), Some(-3));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -238,6 +217,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -245,10 +225,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.infimum(), Some(-3));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -268,16 +244,13 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
     /// assert_eq!(sel.supremum(), Some(5));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -289,6 +262,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -296,10 +270,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.supremum(), Some(5));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -319,6 +289,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -328,10 +299,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_empty(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -347,6 +314,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -356,10 +324,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_full(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -375,6 +339,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
@@ -384,10 +349,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_left_bounded(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -403,6 +364,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<Option<i32>> = Interval::open(Some(-2), Some(4)).into();
@@ -412,10 +374,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_left_bounded(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -435,6 +393,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<Option<i32>> = Interval::open(Some(-2), Some(4)).into();
@@ -444,10 +403,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_right_bounded(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -466,6 +421,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<Option<i32>> = Interval::unbounded_to(Some(-2)).into();
@@ -475,10 +431,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.is_half_bounded(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -496,6 +448,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(0, 20));
@@ -504,10 +457,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.contains(&-15), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     #[inline]
@@ -527,6 +476,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -538,10 +488,6 @@ impl<T> Selection<T>
     /// assert_eq!(a.intersects(&b), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn intersects(&self, other: &Self) -> bool {
@@ -562,6 +508,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     // /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -570,10 +517,6 @@ impl<T> Selection<T>
     // ///     vec![Interval::unbounded_to(-3), Interval::unbounded_from(5)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -586,6 +529,7 @@ impl<T> Selection<T>
     /// # use std::i32;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -596,10 +540,6 @@ impl<T> Selection<T>
     /// ]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn complement(&self) -> Self {
@@ -615,6 +555,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -623,10 +564,6 @@ impl<T> Selection<T>
     ///     vec![Interval::closed(4, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -638,6 +575,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
@@ -646,10 +584,6 @@ impl<T> Selection<T>
     ///     vec![Interval::closed(5, 6)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn intersect(&self, other: &Self) -> Self {
@@ -665,6 +599,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -673,10 +608,6 @@ impl<T> Selection<T>
     ///     vec![Interval::closed(-3, 13)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -688,6 +619,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
@@ -696,10 +628,6 @@ impl<T> Selection<T>
     ///     vec![Interval::closed(-2, 12)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn union(&self, other: &Self) -> Self {
@@ -715,6 +643,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -723,10 +652,6 @@ impl<T> Selection<T>
     ///     vec![Interval::right_open(-3, 4)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn minus(&self, other: &Self) -> Self {
@@ -742,6 +667,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -751,10 +677,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.enclose(), Interval::left_open(-3, 13));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn enclose(&self) -> Interval<T> {
@@ -770,6 +692,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -779,10 +702,6 @@ impl<T> Selection<T>
     /// assert_eq!(sel.enclose(), Interval::closed(-2, 13));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn closure(&self) -> Interval<T> {
@@ -802,6 +721,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -811,10 +731,6 @@ impl<T> Selection<T>
     ///     [Interval::open(2, 5)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -826,6 +742,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -835,10 +752,6 @@ impl<T> Selection<T>
     ///     [Interval::closed(3, 4)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn intersect_in_place(&mut self, interval: Interval<T>) {
@@ -853,6 +766,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -862,10 +776,6 @@ impl<T> Selection<T>
     ///     [Interval::closed(-3, 7), Interval::open(12, 15)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -877,6 +787,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::open(-3, 8));
@@ -886,10 +797,6 @@ impl<T> Selection<T>
     ///     [Interval::closed(-2, 9)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn union_in_place(&mut self, interval: Interval<T>) {
@@ -904,6 +811,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -913,10 +821,6 @@ impl<T> Selection<T>
     ///     [Interval::closed(-3, 2), Interval::closed(5, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     ///
@@ -928,6 +832,7 @@ impl<T> Selection<T>
     /// # use std::error::Error;
     /// # use interval::Interval;
     /// # use interval::Selection;
+    /// # fn main() { example().unwrap(); }
     /// # fn example() -> Result<(), Box<Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
@@ -937,10 +842,6 @@ impl<T> Selection<T>
     ///     [Interval::closed(-3, 1), Interval::closed(6, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
-    /// # }
-    /// #
-    /// # fn main() {
-    /// #     example().unwrap();
     /// # }
     /// ```
     pub fn minus_in_place(&mut self, interval: Interval<T>) {
