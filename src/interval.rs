@@ -21,9 +21,10 @@ use raw_interval::RawInterval;
 use std::convert;
 use std::ops::Range;
 use std::ops::RangeFrom;
-// use std::ops::RangeInclusive;
+// use std::ops::RangeInclusive; // TODO(Sky): Add when RangeInclusive accessors stabilize.
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
+// use std::ops::RangeFull; // NOTE: Excluded due to impl conflict.
 use std::ops::Sub;
 
 // Local enum shortcuts.
@@ -1779,11 +1780,11 @@ impl<T> convert::From<RawInterval<T>> for Interval<T>
     }
 }
 
-// Conflicts with From<RangeFull> convertion.
+// NOTE: Conflicts with From<RangeFull> convertion.
 impl<T> convert::From<T> for Interval<T> 
     where T: PartialOrd + Ord + Clone
 {
-    default fn from(point: T) -> Self {
+    fn from(point: T) -> Self {
         Interval(RawInterval::Point(point).normalized())
     }
 }
@@ -1833,6 +1834,7 @@ impl<T> convert::From<RangeToInclusive<T>> for Interval<T>
     }
 }
 
+// NOTE: Conflicts with From<T> convertion.
 // impl<T> convert::From<RangeFull> for Interval<T>
 //     where T: PartialOrd + Ord + Clone
 // {
