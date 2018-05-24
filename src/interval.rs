@@ -19,6 +19,11 @@ use raw_interval::RawInterval;
 
 // Standard library imports.
 use std::convert;
+use std::ops::Range;
+use std::ops::RangeFrom;
+// use std::ops::RangeInclusive;
+use std::ops::RangeTo;
+use std::ops::RangeToInclusive;
 use std::ops::Sub;
 
 // Local enum shortcuts.
@@ -1773,14 +1778,67 @@ impl<T> convert::From<RawInterval<T>> for Interval<T>
     }
 }
 
+// Conflicts with From<RangeFull> convertion.
 impl<T> convert::From<T> for Interval<T> 
     where T: PartialOrd + Ord + Clone
 {
-    fn from(point: T) -> Self {
+    default fn from(point: T) -> Self {
         Interval(RawInterval::Point(point).normalized())
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Conversion traits
+////////////////////////////////////////////////////////////////////////////////
+
+impl<T> convert::From<Range<T>> for Interval<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn from(r: Range<T>) -> Self {
+        Interval(RawInterval::right_open(r.start, r.end).normalized())
+    }
+}
+
+// TODO(Sky): Fix RangeInclusive once the accessors become available.
+// impl<T> convert::From<RangeInclusive<T>> for Interval<T>
+//     where T: PartialOrd + Ord + Clone
+// {
+//     fn from(r: RangeInclusive<T>) -> Self {
+//         Interval(RawInterval::closed(r.next().unwrap(), r.next_back().unwrap()).normalized())
+//     }
+// }
+
+impl<T> convert::From<RangeFrom<T>> for Interval<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn from(r: RangeFrom<T>) -> Self {
+        Interval(RawInterval::From(r.start).normalized())
+    }
+}
+
+impl<T> convert::From<RangeTo<T>> for Interval<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn from(r: RangeTo<T>) -> Self {
+        Interval(RawInterval::UpTo(r.end).normalized())
+    }
+}
+
+impl<T> convert::From<RangeToInclusive<T>> for Interval<T>
+    where T: PartialOrd + Ord + Clone
+{
+    fn from(r: RangeToInclusive<T>) -> Self {
+        Interval(RawInterval::To(r.end).normalized())
+    }
+}
+
+// impl<T> convert::From<RangeFull> for Interval<T>
+//     where T: PartialOrd + Ord + Clone
+// {
+//     fn from(r: RangeFull) -> Self {
+//         Interval(RawInterval::full().normalized())
+//     }
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Default
