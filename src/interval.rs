@@ -1986,7 +1986,7 @@ impl<T> convert::From<T> for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 // Default
 ////////////////////////////////////////////////////////////////////////////////
-impl<T> Default for Interval<T> where T: PartialOrd + Ord + Clone + Finite {
+impl<T> Default for Interval<T> where T: PartialOrd + Ord + Clone {
     fn default() -> Self {
         Interval::empty()
     }
