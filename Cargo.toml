@@ -1,6 +1,6 @@
 [package]
 name = "interval"
-version = "0.12.5" # Remember to update html_root_url & README.
+version = "0.12.6" # Remember to update html_root_url & README.
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 description = "Interval library"
 license = "MIT, Apache 2.0"

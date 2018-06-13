@@ -10,7 +10,7 @@
 //! Provides a basic bounded interval type for doing complex set selections.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-#![doc(html_root_url = "https://docs.rs/interval/0.12.5")]
+#![doc(html_root_url = "https://docs.rs/interval/0.12.6")]
 #![feature(specialization)]
 #![warn(missing_docs)]
 
