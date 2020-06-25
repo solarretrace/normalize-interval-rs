@@ -12,16 +12,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use bound::Bound;
-use utilities::Split;
+use crate::bound::Bound;
+use crate::utilities::Split;
 
 // Standard library imports.
 use std::fmt;
 use std::cmp::Ordering;
-
-// Local enum shortcuts.
-use self::RawInterval::*;
-use Bound::*;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,6 +69,8 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// [`Bound`]: bound/enum.Bound.html
     /// [`Empty`]: #variant.Empty
     pub fn new(lower: Bound<T>, upper: Bound<T>) -> Self {
+        use Bound::*;
+        use RawInterval::*;
         match (lower, upper) {
             (Include(l), Include(u)) => RawInterval::closed(l, u),
             (Include(l), Exclude(u)) => RawInterval::right_open(l, u),
@@ -93,6 +91,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// [`Open`]: #variant.Open
     /// [`Empty`]: #variant.Empty
     pub fn open(lower: T, upper: T) -> Self {
+        use RawInterval::*;
         match T::cmp(&lower, &upper) {
             Ordering::Less => Open(lower, upper),
             _              => Empty,
@@ -106,6 +105,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// [`LeftOpen`]: #variant.LeftOpen
     /// [`Empty`]: #variant.Empty
     pub fn left_open(lower: T, upper: T) -> Self {
+        use RawInterval::*;
         match T::cmp(&lower, &upper) {
             Ordering::Less    => LeftOpen(lower, upper),
             Ordering::Equal   => Point(upper),
@@ -120,6 +120,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// [`RightOpen`]: #variant.RightOpen
     /// [`Empty`]: #variant.Empty
     pub fn right_open(lower: T, upper: T) -> Self {
+        use RawInterval::*;
         match T::cmp(&lower, &upper) {
             Ordering::Less    => RightOpen(lower, upper),
             Ordering::Equal   => Point(lower),
@@ -134,6 +135,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// [`Closed`]: #variant.Closed
     /// [`Empty`]: #variant.Empty
     pub fn closed(lower: T, upper: T) -> Self {
+        use RawInterval::*;
         match T::cmp(&lower, &upper) {
             Ordering::Less    => Closed(lower, upper),
             Ordering::Equal   => Point(lower),
@@ -148,6 +150,8 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// Returns the lower bound of the interval, or `None` if the interval is
     /// empty.
     pub fn lower_bound(&self) -> Option<Bound<T>> {
+        use Bound::*;
+        use RawInterval::*;
         Some(match *self {
             Empty               => return None,
             Point(ref p)        => Include(p.clone()),
@@ -166,6 +170,8 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// Returns the upper bound of the interval, or `None` if the interval is
     /// empty.
     pub fn upper_bound(&self) -> Option<Bound<T>> {
+        use Bound::*;
+        use RawInterval::*;
         Some(match *self {
             Empty               => return None,
             Point(ref p)        => Include(p.clone()),
@@ -183,6 +189,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 
     /// Returns the greatest lower bound of the interval.
     pub fn infimum(&self) -> Option<T> {
+        use Bound::*;
         match self.lower_bound() {
             Some(Include(ref b)) => Some(b.clone()),
             Some(Exclude(ref b)) => Some(b.clone()),
@@ -192,6 +199,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     
     /// Returns the least upper bound of the interval.
     pub fn supremum(&self) -> Option<T> {
+        use Bound::*;
         match self.upper_bound() {
             Some(Include(ref b)) => Some(b.clone()),
             Some(Exclude(ref b)) => Some(b.clone()),
@@ -207,6 +215,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     ///
     /// [`Empty`]: #variant.Empty
     pub fn is_empty(&self) -> bool {
+        use RawInterval::*;
         match *self {
             Empty => true,
             _     => false,
@@ -217,6 +226,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     ///
     /// [`Full`]: #variant.Full
     pub fn is_full(&self) -> bool {
+        use RawInterval::*;
         match *self {
             Full => true,
             _     => false,
@@ -225,6 +235,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 
     /// Returns `true` if the interval contains the given point.
     pub fn contains(&self, point: &T) -> bool {
+        use RawInterval::*;
         match *self {
             Empty                   => false,
             Point(ref p)            => point == p,
@@ -270,6 +281,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// Returns a `Vec` of `RawInterval`s containing all of the points not in
     /// the interval.
     pub fn complement(&self) -> impl Iterator<Item=Self> {
+        use RawInterval::*;
         match *self {
             Empty                   => Split::One(Full),
             Point(ref p)            => Split::Two(UpTo(p.clone()), UpFrom(p.clone())),
@@ -290,12 +302,12 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     pub fn intersect(&self, other: &Self) -> Self {
         let lb = match (self.lower_bound(), other.lower_bound()) {
             (Some(a), Some(b)) => a.greatest_intersect(&b),
-            _                  => return Empty, // Either Empty.
+            _                  => return RawInterval::Empty, // Either Empty.
         };
 
         let ub = match (self.upper_bound(), other.upper_bound()) {
             (Some(a), Some(b)) => a.least_intersect(&b),
-            _                  => return Empty, // Either Empty.
+            _                  => return RawInterval::Empty, // Either Empty.
         };
 
         if lb.as_ref() == ub.as_ref() && 
@@ -343,14 +355,14 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
             (Some(a), Some(b)) => a.least_union(&b),
             (Some(a), None)    => a,
             (None,    Some(b)) => b,
-            (None,    None)    => return Empty, // Both Empty.
+            (None,    None)    => return RawInterval::Empty, // Both Empty.
         };
 
         let ub = match (self.upper_bound(), other.upper_bound()) {
             (Some(a), Some(b)) => a.greatest_union(&b),
             (Some(a), None)    => a,
             (None,    Some(b)) => b,
-            (None,    None)    => return Empty, // Both Empty.
+            (None,    None)    => return RawInterval::Empty, // Both Empty.
         };
 
         RawInterval::new(lb, ub)
@@ -359,6 +371,7 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// Returns the smallest closed interval that contains all of the points
     /// contained within the interval.
     pub fn closure(&self) -> Self {
+        use RawInterval::*;
         match self {
             &Open(ref l, ref r)      => Closed(l.clone(), r.clone()),
             &LeftOpen(ref l, ref r)  => Closed(l.clone(), r.clone()),
@@ -377,14 +390,14 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     pub fn enclose_all<I>(intervals: I) -> Self
         where I: Iterator<Item=Self>
     {
-        intervals.fold(Full, |acc, i| acc.enclose(&i))
+        intervals.fold(RawInterval::Full, |acc, i| acc.enclose(&i))
     }
 
     /// Returns the intersection of all of the given intervals.
     pub fn intersect_all<I>(intervals: I) -> Self
         where I: Iterator<Item=Self>
     {
-        intervals.fold(Full, |acc, i| acc.intersect(&i))
+        intervals.fold(RawInterval::Full, |acc, i| acc.intersect(&i))
     }
 
     /// Returns the union of all of the given intervals.
@@ -399,8 +412,8 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
             // Fold over remaining intervals.
             it.fold(vec![start], |mut prev, next| {
                 // Early exit for full interval.
-                if next == Full {
-                    return vec![Full];
+                if next == RawInterval::Full {
+                    return vec![RawInterval::Full];
                 }
                 let mut append = true;
                 for item in prev.iter_mut() {
@@ -426,7 +439,8 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
 ////////////////////////////////////////////////////////////////////////////////
 // Display using interval notation.
 impl<T> fmt::Display for RawInterval<T> where T: fmt::Display {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use RawInterval::*;
         match *self {
             Empty                   => write!(f, "Ø"),
             Point(ref p)            => write!(f, "{}", p),

@@ -9,20 +9,13 @@
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
 // Local imports.
-use bound::Bound;
-use raw_interval::RawInterval;
-use utilities::Split;
+use crate::bound::Bound;
+use crate::raw_interval::RawInterval;
+use crate::utilities::Split;
 
 // Standard library imports.
 use std::cmp::Ordering;
-
-// Local enum shortcuts.
-use bound::Bound::*;
-use std::cmp::Ordering::*;
-use self::Tine::*;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,7 +27,7 @@ use self::Tine::*;
 /// that the `TineTree` will always be able to split at the appropriate place
 /// for a given bound type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Tine<T> {
+pub(crate) enum Tine<T> {
     /// The lower `Bound` of an `Interval`.
     Lower(Bound<T>),
     /// A combined upper and lower `Bound` of an `Interval`.
@@ -46,8 +39,10 @@ pub enum Tine<T> {
 
 impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     /// Returns the set of `Tine`s representing the given interval.
-    pub fn from_raw_interval(interval: RawInterval<T>) -> Split<Self> {
-        use raw_interval::RawInterval::*;
+    pub(crate) fn from_raw_interval(interval: RawInterval<T>) -> Split<Self> {
+        use RawInterval::*;
+        use Bound::*;
+        use Tine::{ Lower, Upper };
         match interval {
             Empty           => Split::Zero,
             Point(p)        => Split::One(Tine::Point(Include(p))),
@@ -64,7 +59,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     }
 
     /// Returns `true` if the `Tine` represents a lower bound.
-    pub fn is_lower_bound(&self) -> bool {
+    pub(crate) fn is_lower_bound(&self) -> bool {
+        use Bound::*;
+        use Tine::*;
         match self {
             &Lower(_)          => true,
             &Point(Exclude(_)) => true,
@@ -73,7 +70,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     }
 
     /// Returns `true` if the `Tine` represents an upper bound.
-    pub fn is_upper_bound(&self) -> bool {
+    pub(crate) fn is_upper_bound(&self) -> bool {
+        use Bound::*;
+        use Tine::*;
         match self {
             &Upper(_)          => true,
             &Point(Exclude(_)) => true,
@@ -82,7 +81,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     }
 
     /// Returns `true` if the `Tine` represents a single point.
-    pub fn is_point_include(&self) -> bool {
+    pub(crate) fn is_point_include(&self) -> bool {
+        use Bound::*;
+        use Tine::*;
         match self {
             &Point(Include(_)) => true,
             _                  => false,
@@ -91,7 +92,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
     /// Returns `true` if the `Tine` represents an upper and lower bound, 
     /// excluding the referenced point.
-    pub fn is_point_exclude(&self) -> bool {
+    pub(crate) fn is_point_exclude(&self) -> bool {
+        use Bound::*;
+        use Tine::*;
         match self {
             &Point(Exclude(_)) => true,
             _                  => false,
@@ -100,7 +103,8 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
     /// Returns a reference to the `Bound` point, or `None` if the `Bound` is 
     /// `Infinite`
-    pub fn as_ref(&self) -> Option<&T> {
+    pub(crate) fn as_ref(&self) -> Option<&T> {
+        use Tine::*;
         match self {
             &Lower(ref x) => x.as_ref(),
             &Point(ref x) => x.as_ref(),
@@ -109,7 +113,8 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     }
 
     /// Returns the inner `Bound`.
-    pub fn into_inner(self) -> Bound<T> {
+    pub(crate) fn into_inner(self) -> Bound<T> {
+        use Tine::*;
         match self {
             Lower(x) => x,
             Point(x) => x,
@@ -119,7 +124,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
     /// Unifies two equal `Tines` by including any coincident points. Returns 
     /// `None` if all points in the boundry region are included.
-    pub fn union(self, other: &Self) -> Option<Self> {
+    pub(crate) fn union(self, other: &Self) -> Option<Self> {
+        use Bound::*;
+        use Tine::*;
         debug_assert!(self.as_ref() == other.as_ref(),
             "cannot union unequal tines");
 
@@ -168,7 +175,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
     /// Unifies two equal `Tines` by excluding any non-coincident points.
     /// Returns `None` if none of the points in the boundry region are included.
-    pub fn intersect(self, other: &Self) -> Option<Self> {
+    pub(crate) fn intersect(self, other: &Self) -> Option<Self> {
+        use Bound::*;
+        use Tine::*;
         debug_assert!(self.as_ref() == other.as_ref(),
             "cannot intersect unequal tines");
 
@@ -211,7 +220,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
 
     /// Unifies two equal `Tines` by excluding any coincident points. Returns
     /// `None` if none of the points in the boundry region are included.
-    pub fn minus(self, other: &Self) -> Option<Self> {
+    pub(crate) fn minus(self, other: &Self) -> Option<Self> {
+        use Bound::*;
+        use Tine::*;
         debug_assert!(self.as_ref() == other.as_ref(),
             "cannot intersect unequal tines");
 
@@ -253,7 +264,9 @@ impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     }
 
     /// Returns the `Tine` with its boundaries inverted.
-    pub fn invert(self) -> Self {
+    pub(crate) fn invert(self) -> Self {
+        use Bound::*;
+        use Tine::*;
         match self {
             Lower(Include(p)) => Upper(Exclude(p)),
             Lower(Exclude(p)) => Upper(Include(p)),
@@ -273,6 +286,9 @@ impl<T> PartialOrd for Tine<T> where T: PartialOrd + Ord + Clone {
             // Compare points.
             l.partial_cmp(r)
         } else {
+            use Bound::*;
+            use Tine::*;
+            use Ordering::*;
             // Compare infinite bounds.
             match (self, other) {
                 (&Lower(Infinite), &Lower(Infinite)) => Some(Equal),

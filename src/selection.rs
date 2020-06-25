@@ -12,13 +12,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use bound::Bound;
-use interval::Interval;
-use normalize::Normalize;
-use raw_interval::RawInterval;
-use tine_tree::RawIntervalIter;
-use tine_tree::TineTree;
-use tine_tree;
+use crate::bound::Bound;
+use crate::interval::Interval;
+use crate::normalize::Normalize;
+use crate::raw_interval::RawInterval;
+use crate::tine_tree::RawIntervalIter;
+use crate::tine_tree::TineTree;
+use crate::tine_tree;
 
 // Standard library imports.
 use std::iter::FromIterator;
@@ -820,7 +820,7 @@ impl<T> Selection<T>
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns an iterator over each of the `Interval`s in the `Selection`.
-    pub fn iter(&self) -> IntervalIter<T> {
+    pub fn iter(&self) -> IntervalIter<'_, T> {
         IntervalIter(self.0.iter_intervals())
     }
 }
@@ -895,6 +895,7 @@ impl<T> IntoIterator for Selection<T>
 // IntoIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An owning `Iterator` over the `Interval`s of a `Selection`.
+#[derive(Debug)]
 pub struct IntoIter<T>(tine_tree::IntoIter<T>);
 
 impl<T> Iterator for IntoIter<T>
@@ -926,7 +927,8 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 // IntervalIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An `Iterator` over the `Interval`s of a `Selection`.
-pub struct IntervalIter<'t, T: 't>(RawIntervalIter<'t, T>)
+#[derive(Debug)]
+pub struct IntervalIter<'t, T>(RawIntervalIter<'t, T>)
     where T: PartialOrd + Ord + Clone;
 
 impl<'t, T> Iterator for IntervalIter<'t, T> 

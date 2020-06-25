@@ -21,7 +21,7 @@ use std::ptr;
 ////////////////////////////////////////////////////////////////////////////////
 /// A type which may contain zero, one, or two of a value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Split<T> {
+pub(crate) enum Split<T> {
 	/// No value present.
 	Zero,
 	/// One value present.
@@ -83,7 +83,7 @@ impl<T> From<(T, T)> for Split<T> {
 /// match the behavior of panicking inside a destructor, which itself is
 /// simply specified to not unwind.
 #[inline]
-pub fn replace_with<T, F>(val: &mut T, replace: F)
+fn replace_with<T, F>(val: &mut T, replace: F)
     where F: FnOnce(T) -> T {
     // Guard against unwinding. Note that this is critical to safety, to avoid
     // the value behind the reference `val` is not dropped twice during

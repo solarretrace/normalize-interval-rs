@@ -1,51 +1,50 @@
 [package]
 name = "interval"
-version = "0.12.6" # Remember to update html_root_url & README.
+version = "0.12.6"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
+edition = "2018"
+license = "MIT or Apache-2.0"
+# maintenance = { status = "experiemental" }
+repository = "https://github.com/skysch/interval-rs"
 description = "Interval library"
-license = "MIT, Apache 2.0"
-readme = "README.md"
+readme = "readme.md"
 keywords = ["range", "interval", "selection", "set", "span"]
 categories = []
 documentation = ""
 homepage = ""
-repository = "https://github.com/skysch/interval-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
 
 [lib]
 name = "interval"
 
+[features]
+default = []
 
 # The development profile, used for `cargo build`
 [profile.dev]
 opt-level = 0
-debug = true
+debug = false # Disabled to speed up compilation; not being used much.
 rpath = false
 lto = false
 debug-assertions = true
+incremental = true
+overflow-checks = true
+
+# Development profile overrides, ensure dependent crates run fast.
+[profile.dev.package."*"]
+opt-level = 3
+debug-assertions = false
+codegen-units = 1
+
 
 # The release profile, used for `cargo build --release`
 [profile.release]
 opt-level = 3
 debug = true
 rpath = false
-lto = false
+lto = "fat"
 debug-assertions = false
 codegen-units = 1
+incremental = false
+overflow-checks = true
 
-# The testing profile, used for `cargo test`
-[profile.test]
-opt-level = 0
-debug = true
-rpath = false
-lto = false
-debug-assertions = true
-
-# The benchmarking profile, used for `cargo bench`
-[profile.bench]
-opt-level = 3
-debug = false
-rpath = false
-lto = false
-debug-assertions = false
-codegen-units = 1

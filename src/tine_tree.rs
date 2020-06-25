@@ -6,27 +6,21 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 ////////////////////////////////////////////////////////////////////////////////
-//!
+//! Interval TineTree implementation.
 ////////////////////////////////////////////////////////////////////////////////
-
-
+#![allow(unused_results)]
 
 // Local imports.
-use bound::Bound;
-use raw_interval::RawInterval;
-use tine::Tine;
-use tine::Tine::*;
-use utilities::Split;
+use crate::bound::Bound;
+use crate::raw_interval::RawInterval;
+use crate::tine::Tine;
+use crate::utilities::Split;
 
 // Standard library imports.
 use std::collections::BTreeSet;
 use std::collections::btree_set;
 use std::collections;
 use std::iter::FromIterator;
-
-// Local enum shortcuts.
-use bound::Bound::*;
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,7 +39,7 @@ use bound::Bound::*;
 /// [`Interval`]: interval/struct.Interval.html
 ///
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
-pub struct TineTree<T>(BTreeSet<Tine<T>>) where T: Ord + Clone;
+pub(crate) struct TineTree<T>(BTreeSet<Tine<T>>) where T: Ord + Clone;
 
 impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
@@ -53,12 +47,12 @@ impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
 
     /// Constructs an empty `TineTree`.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         TineTree(BTreeSet::new())
     }
 
     /// Constructs a `TineTree` from a `RawInterval`.
-    pub fn from_raw_interval(interval: RawInterval<T>) -> Self {
+    pub(crate) fn from_raw_interval(interval: RawInterval<T>) -> Self {
         TineTree(BTreeSet::from_iter(Tine::from_raw_interval(interval)))
     }
 
@@ -69,14 +63,14 @@ impl<T> TineTree<T> where T: Ord + Clone {
     /// Returns the lower [`Bound`] of the `TineTree`, or `None` if the 
     /// `TineTree` is empty.
     #[inline]
-    pub fn lower_bound(&self) -> Option<Bound<T>> {
+    pub(crate) fn lower_bound(&self) -> Option<Bound<T>> {
         self.0.iter().next().cloned().map(Tine::into_inner)
     }
 
     /// Returns the upper [`Bound`] of the `TineTree`, or `None` if the 
     /// `TineTree` is empty.
     #[inline]
-    pub fn upper_bound(&self) -> Option<Bound<T>> {
+    pub(crate) fn upper_bound(&self) -> Option<Bound<T>> {
         self.0.iter().next_back().cloned().map(Tine::into_inner)
     }
 
@@ -86,19 +80,19 @@ impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
     
     /// Returns `true` if the `TineTree` is empty.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// Returns `true` if the `TineTree` is full.
-    pub fn is_full(&self) -> bool {
+    pub(crate) fn is_full(&self) -> bool {
         self.0.iter().collect::<Vec<_>>() == [
             &Tine::Lower(Bound::Infinite),
             &Tine::Upper(Bound::Infinite)]
     }
 
     /// Returns `true` if the `TineTree` contains the given point.
-    pub fn contains(&self, point: &T) -> bool {
+    pub(crate) fn contains(&self, point: &T) -> bool {
         // TODO(Sky): Could be optimized by splitting the tree and looking around.
         for interval in self.iter_intervals() {
             if interval.contains(point) {return true;}
@@ -112,7 +106,10 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns a `TineTree` containing all points not in present in the 
     /// `TineTree`.
-    pub fn complement(&self) -> Self {
+    pub(crate) fn complement(&self) -> Self {
+        use Bound::*;
+        use Tine::*;
+
         // Early exit if we're complementing an empty interval.
         if self.0.is_empty() {
             return RawInterval::Full.into();
@@ -164,7 +161,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns a `TineTree` containing all points in present in both of the 
     /// `TineTree`s.
-    pub fn intersect(&self, other: &Self) -> Self {
+    pub(crate) fn intersect(&self, other: &Self) -> Self {
         let mut intersection = Self::new();
         let mut self_intervals = self.iter_intervals();
         let mut other_intervals = other.iter_intervals();
@@ -191,7 +188,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns a `TineTree` containing all points present in either of the 
     /// `TineTree`s.
-    pub fn union(&self, other: &Self) -> Self {
+    pub(crate) fn union(&self, other: &Self) -> Self {
         let mut union = self.clone();
         for interval in other.iter_intervals() {
             union.union_in_place(&interval);
@@ -201,7 +198,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns a `TineTree` containing the intersection of the given 
     /// `TineTree`'s intervals.    
-    pub fn minus(&self, other: &Self) -> Self {
+    pub(crate) fn minus(&self, other: &Self) -> Self {
         let mut minus = self.clone();
         for interval in other.iter_intervals() {
             minus.minus_in_place(&interval);
@@ -211,7 +208,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns the smallest `RawInterval` containing all of the points in the 
     /// `TineTree`.
-    pub fn enclose(&self) -> RawInterval<T> {
+    pub(crate) fn enclose(&self) -> RawInterval<T> {
         // Early exit if we're enclosing an empty interval.
         if self.0.is_empty() {
             return RawInterval::Empty;
@@ -249,7 +246,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
 
     /// Returns the smallest closed `RawInterval` containing all of the points
     /// in the `TineTree`.
-    pub fn closure(&self) -> RawInterval<T> {
+    pub(crate) fn closure(&self) -> RawInterval<T> {
         self.enclose().closure()
     }
 
@@ -258,7 +255,10 @@ impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
 
     /// Intersects the given interval with the contents of the tree.
-    pub fn intersect_in_place(&mut self, interval: &RawInterval<T>) {
+    pub(crate) fn intersect_in_place(&mut self, interval: &RawInterval<T>) {
+        use Bound::*;
+        use Tine::*;
+
         // Early exit if we're intersecting a full interval or are empty.
         if self.0.is_empty() || interval.is_full() {return};
 
@@ -395,7 +395,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     }
 
     /// Unions the given interval with the contents of the tree.
-    pub fn union_in_place(&mut self, interval: &RawInterval<T>) {
+    pub(crate) fn union_in_place(&mut self, interval: &RawInterval<T>) {
         // Early exit if we're unioning a full interval.
         if interval.is_full() {
             *self = TineTree::from_raw_interval(RawInterval::Full);
@@ -594,7 +594,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     }
 
     /// Minuses the given interval from the contents of the tree.
-    pub fn minus_in_place(&mut self, interval: &RawInterval<T>) {
+    pub(crate) fn minus_in_place(&mut self, interval: &RawInterval<T>) {
         // Early exit if we're minusing an empty interval or are empty.
         if self.0.is_empty() || interval.is_empty() {return};
 
@@ -702,6 +702,8 @@ impl<T> TineTree<T> where T: Ord + Clone {
         println!("Minus {} {} {} {}", open_before, merged_l.is_some(), merged_u.is_some(), closed_after);
         // Insert tines into the tree, ignoring them if the are not wrapped by a
         // surounding interval.
+        use Bound::*;
+        use Tine::*;
         match (open_before, merged_l, merged_u, closed_after) {
             (true,  Some(l), Some(u), true)  => {
                 // ( ) ( )
@@ -753,8 +755,8 @@ impl<T> TineTree<T> where T: Ord + Clone {
                 //     O R
                 // [ ]
                 // ( )
-                if l.is_point_include() {self.0.insert(l);}
-                if u.is_point_include() {self.0.insert(u);}
+                if l.is_point_include() { self.0.insert(l); }
+                if u.is_point_include() { self.0.insert(u); }
             },
 
             (false, Some(l), None,    false)  => {
@@ -763,7 +765,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
                 //     O R
                 //   |
                 // ( ]
-                if l.is_point_include() {self.0.insert(l);}
+                if l.is_point_include() { self.0.insert(l); }
             },
 
             (false, None,    Some(u), false)  => {
@@ -772,7 +774,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
                 //     O R
                 // |
                 // [ )
-                if u.is_point_include() {self.0.insert(u);}
+                if u.is_point_include() { self.0.insert(u); }
             },
 
             (false, None,    None,    false)  => {
@@ -915,7 +917,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns an iterator over each of the `RawInterval`s in the tree.
-    pub fn iter_intervals(&self) -> RawIntervalIter<T> {
+    pub(crate) fn iter_intervals(&self) -> RawIntervalIter<'_, T> {
         RawIntervalIter {
             tine_iter: self.0.iter(),
             saved_lower: None,
@@ -985,7 +987,8 @@ impl<T> IntoIterator for TineTree<T>
 // IntoIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An owning `Iterator` over the `TineTree`s `RawInterval`s.
-pub struct IntoIter<T> {
+#[derive(Debug)]
+pub(crate) struct IntoIter<T> {
     inner: btree_set::IntoIter<Tine<T>>,
     saved_lower: Option<Tine<T>>,
     saved_upper: Option<Tine<T>>,
@@ -995,6 +998,8 @@ impl<T> Iterator for IntoIter<T> where T: PartialOrd + Ord + Clone {
     type Item = RawInterval<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        use Bound::*;
+        use Tine::*;
         self.saved_lower
             .take()
             .or_else(|| self.inner.next())
@@ -1029,6 +1034,8 @@ impl<T> DoubleEndedIterator for IntoIter<T>
     where T: PartialOrd + Ord + Clone 
 {
     fn next_back(&mut self) -> Option<Self::Item> {
+        use Bound::*;
+        use Tine::*;
         self.saved_upper
             .take()
             .or_else(|| self.inner.next_back())
@@ -1063,7 +1070,8 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 // RawIntervalIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An `Iterator` that constructs `RawInterval`s from a sequence of `Tine`s.
-pub struct RawIntervalIter<'t, T: 't> {
+#[derive(Debug)]
+pub(crate) struct RawIntervalIter<'t, T> {
     tine_iter: collections::btree_set::Iter<'t, Tine<T>>,
     saved_lower: Option<Tine<T>>,
     saved_upper: Option<Tine<T>>,
@@ -1075,6 +1083,8 @@ impl<'t, T> Iterator for RawIntervalIter<'t, T>
     type Item = RawInterval<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        use Bound::*;
+        use Tine::*;
         self.saved_lower
             .take()
             .or_else(|| self.tine_iter.next().cloned())
@@ -1110,6 +1120,8 @@ impl<'t, T> DoubleEndedIterator for RawIntervalIter<'t, T>
     where T: PartialOrd + Ord + Clone 
 {
     fn next_back(&mut self) -> Option<Self::Item> {
+        use Bound::*;
+        use Tine::*;
         self.saved_upper
             .take()
             .or_else(|| self.tine_iter.next_back().cloned())
@@ -1144,11 +1156,12 @@ impl<'t, T> DoubleEndedIterator for RawIntervalIter<'t, T>
 // TreeSplit
 ////////////////////////////////////////////////////////////////////////////////
 /// A `TineTree`s elements split out for simplified manipulation.
+#[derive(Debug)]
 struct TreeSplit<T> {
-    pub before: Option<Tine<T>>,
-    pub lower: Option<Tine<T>>,
-    pub upper: Option<Tine<T>>,
-    pub after: Option<Tine<T>>,
+    pub(crate) before: Option<Tine<T>>,
+    pub(crate) lower: Option<Tine<T>>,
+    pub(crate) upper: Option<Tine<T>>,
+    pub(crate) after: Option<Tine<T>>,
 }
 
 impl<T> Default for TreeSplit<T> {

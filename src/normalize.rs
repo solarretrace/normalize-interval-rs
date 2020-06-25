@@ -12,14 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use raw_interval::RawInterval;
-
-// Standard imports.
-use std::mem;
-use std;
-
-// Local enum shortcuts.
-use raw_interval::RawInterval::*;
+use crate::raw_interval::RawInterval;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +77,8 @@ impl<T> Normalize for RawInterval<T> {
 /// Specialization for [`Finite`] intervals.
 impl<T> Normalize for RawInterval<T> where T: Finite {
     default fn normalize(&mut self) {
-        *self = match mem::replace(self, Empty) {
+        use RawInterval::*;
+        *self = match std::mem::replace(self, Empty) {
             Empty           => Empty,
             Point(p)        => Point(p),
             Open(l, r)      => match (l.succ(), r.pred()) {
@@ -103,7 +97,8 @@ impl<T> Normalize for RawInterval<T> where T: Finite {
     }
 
     default fn denormalize(&mut self) {
-        *self = match mem::replace(self, Empty) {
+        use RawInterval::*;
+        *self = match std::mem::replace(self, Empty) {
             Empty           => Empty,
             Point(p)        => match (p.pred(), p.succ()) {
                 (Some(l), Some(r)) => Open(l, r),

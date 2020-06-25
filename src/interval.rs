@@ -12,23 +12,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use bound::Bound;
-use normalize::Finite;
-use normalize::Normalize;
-use raw_interval::RawInterval;
+use crate::bound::Bound;
+use crate::normalize::Finite;
+use crate::normalize::Normalize;
+use crate::raw_interval::RawInterval;
 
 // Standard library imports.
-use std::convert;
 use std::ops::Range;
 use std::ops::RangeFrom;
-// use std::ops::RangeInclusive; // TODO(Sky): Add when RangeInclusive accessors stabilize.
+// use std::ops::RangeInclusive; // TODO: Add when RangeInclusive accessors stabilize.
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 // use std::ops::RangeFull; // NOTE: Excluded due to impl conflict.
 use std::ops::Sub;
-
-// Local enum shortcuts.
-use raw_interval::RawInterval::*;
 
 
 
@@ -978,8 +974,8 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_empty(&self) -> bool {
         match self.0 {
-            Empty => true,
-            _     => false,
+            RawInterval::Empty => true,
+            _                  => false,
         }
     }
 
@@ -1004,8 +1000,8 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_degenerate(&self) -> bool {
         match self.0 {
-            Point(_) => true,
-            _        => false,
+            RawInterval::Point(_) => true,
+            _                     => false,
         }
     }
 
@@ -1033,9 +1029,9 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_proper(&self) -> bool {
         match self.0 {
-            Empty    => false,
-            Point(_) => false,
-            _        => true,
+            RawInterval::Empty    => false,
+            RawInterval::Point(_) => false,
+            _                     => true,
         }
         
     }
@@ -1078,9 +1074,9 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_open(&self) -> bool {
         match self.0 {
-            Point(_)     => false,
-            Closed(_, _) => false,
-            _            => true,
+            RawInterval::Point(_)     => false,
+            RawInterval::Closed(_, _) => false,
+            _                         => true,
         }
     }
 
@@ -1122,11 +1118,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_left_open(&self) -> bool {
         match self.0 {
-            LeftOpen(_, _) => true,
-            UpTo(_)        => true,
-            To(_)          => true,
-            Full           => true,
-            _              => false,
+            RawInterval::LeftOpen(_, _) => true,
+            RawInterval::UpTo(_)        => true,
+            RawInterval::To(_)          => true,
+            RawInterval::Full           => true,
+            _                           => false,
         }
     }
 
@@ -1168,11 +1164,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_right_open(&self) -> bool {
         match self.0 {
-            RightOpen(_, _) => true,
-            UpFrom(_)       => true,
-            From(_)         => true,
-            Full            => true,
-            _               => false,
+            RawInterval::RightOpen(_, _) => true,
+            RawInterval::UpFrom(_)       => true,
+            RawInterval::From(_)         => true,
+            RawInterval::Full            => true,
+            _                            => false,
         }
     }
 
@@ -1214,10 +1210,10 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_half_open(&self) -> bool {
         match self.0 {
-            Empty        => false,
-            Point(_)     => false,
-            Closed(_, _) => false,
-            _            => true,
+            RawInterval::Empty        => false,
+            RawInterval::Point(_)     => false,
+            RawInterval::Closed(_, _) => false,
+            _                         => true,
         }
     }
 
@@ -1259,11 +1255,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_closed(&self) -> bool {
         match self.0 {
-            Empty        => true,
-            Point(_)     => true,
-            Closed(_, _) => true,
-            Full         => true,
-            _            => false,
+            RawInterval::Empty        => true,
+            RawInterval::Point(_)     => true,
+            RawInterval::Closed(_, _) => true,
+            RawInterval::Full         => true,
+            _                         => false,
         }
     }
 
@@ -1288,11 +1284,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_left_closed(&self) -> bool {
         match self.0 {
-            Point(_)        => true,
-            RightOpen(_, _) => true,
-            Closed(_, _)    => true,
-            From(_)         => true,
-            _               => false,
+            RawInterval::Point(_)        => true,
+            RawInterval::RightOpen(_, _) => true,
+            RawInterval::Closed(_, _)    => true,
+            RawInterval::From(_)         => true,
+            _                            => false,
         }
     }
 
@@ -1317,11 +1313,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_right_closed(&self) -> bool {
         match self.0 {
-            Point(_)       => true,
-            LeftOpen(_, _) => true,
-            Closed(_, _)   => true,
-            To(_)          => true,
-            _              => false,
+            RawInterval::Point(_)       => true,
+            RawInterval::LeftOpen(_, _) => true,
+            RawInterval::Closed(_, _)   => true,
+            RawInterval::To(_)          => true,
+            _                           => false,
         }
     }
 
@@ -1346,11 +1342,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_half_closed(&self) -> bool {
         match self.0 {
-            LeftOpen(_, _)  => true,
-            RightOpen(_, _) => true,
-            To(_)           => true,
-            From(_)         => true,
-            _               => false,
+            RawInterval::LeftOpen(_, _)  => true,
+            RawInterval::RightOpen(_, _) => true,
+            RawInterval::To(_)           => true,
+            RawInterval::From(_)         => true,
+            _                            => false,
         }
     }
 
@@ -1375,12 +1371,12 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_bounded(&self) -> bool {
         match self.0 {
-            UpTo(_)   => false,
-            UpFrom(_) => false,
-            To(_)     => false,
-            From(_)   => false,
-            Full      => false,
-            _         => true,
+            RawInterval::UpTo(_)   => false,
+            RawInterval::UpFrom(_) => false,
+            RawInterval::To(_)     => false,
+            RawInterval::From(_)   => false,
+            RawInterval::Full      => false,
+            _                      => true,
         }
     }
 
@@ -1405,10 +1401,10 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_left_bounded(&self) -> bool {
         match self.0 {
-            UpTo(_) => false,
-            To(_)   => false,
-            Full    => false,
-            _       => true,
+            RawInterval::UpTo(_) => false,
+            RawInterval::To(_)   => false,
+            RawInterval::Full    => false,
+            _                    => true,
         }
     }
 
@@ -1434,10 +1430,10 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_right_bounded(&self) -> bool {
         match self.0 {
-            UpFrom(_) => false,
-            From(_)   => false,
-            Full      => false,
-            _         => true,
+            RawInterval::UpFrom(_) => false,
+            RawInterval::From(_)   => false,
+            RawInterval::Full      => false,
+            _                      => true,
         }
     }
 
@@ -1462,11 +1458,11 @@ impl<T> Interval<T>
     #[inline]
     pub fn is_half_bounded(&self) -> bool {
         match self.0 {
-            UpTo(_)   => true,
-            UpFrom(_) => true,
-            To(_)     => true,
-            From(_)   => true,
-            _         => false,
+            RawInterval::UpTo(_)   => true,
+            RawInterval::UpFrom(_) => true,
+            RawInterval::To(_)     => true,
+            RawInterval::From(_)   => true,
+            _                      => false,
         }
     }
 
@@ -1696,7 +1692,7 @@ impl<T> Interval<T>
 // Conversion traits
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> convert::From<RawInterval<T>> for Interval<T> 
+impl<T> From<RawInterval<T>> for Interval<T> 
     where T: PartialOrd + Ord + Clone
 {
     fn from(raw_interval: RawInterval<T>) -> Self {
@@ -1705,7 +1701,7 @@ impl<T> convert::From<RawInterval<T>> for Interval<T>
 }
 
 // NOTE: Conflicts with From<RangeFull> convertion.
-impl<T> convert::From<T> for Interval<T> 
+impl<T> From<T> for Interval<T> 
     where T: PartialOrd + Ord + Clone
 {
     fn from(point: T) -> Self {
@@ -1717,7 +1713,7 @@ impl<T> convert::From<T> for Interval<T>
 // Conversion traits
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T> convert::From<Range<T>> for Interval<T>
+impl<T> From<Range<T>> for Interval<T>
     where T: PartialOrd + Ord + Clone
 {
     fn from(r: Range<T>) -> Self {
@@ -1726,7 +1722,7 @@ impl<T> convert::From<Range<T>> for Interval<T>
 }
 
 // TODO(Sky): Fix RangeInclusive once the accessors become available.
-// impl<T> convert::From<RangeInclusive<T>> for Interval<T>
+// impl<T> From<RangeInclusive<T>> for Interval<T>
 //     where T: PartialOrd + Ord + Clone
 // {
 //     fn from(r: RangeInclusive<T>) -> Self {
@@ -1734,7 +1730,7 @@ impl<T> convert::From<Range<T>> for Interval<T>
 //     }
 // }
 
-impl<T> convert::From<RangeFrom<T>> for Interval<T>
+impl<T> From<RangeFrom<T>> for Interval<T>
     where T: PartialOrd + Ord + Clone
 {
     fn from(r: RangeFrom<T>) -> Self {
@@ -1742,7 +1738,7 @@ impl<T> convert::From<RangeFrom<T>> for Interval<T>
     }
 }
 
-impl<T> convert::From<RangeTo<T>> for Interval<T>
+impl<T> From<RangeTo<T>> for Interval<T>
     where T: PartialOrd + Ord + Clone
 {
     fn from(r: RangeTo<T>) -> Self {
@@ -1750,7 +1746,7 @@ impl<T> convert::From<RangeTo<T>> for Interval<T>
     }
 }
 
-impl<T> convert::From<RangeToInclusive<T>> for Interval<T>
+impl<T> From<RangeToInclusive<T>> for Interval<T>
     where T: PartialOrd + Ord + Clone
 {
     fn from(r: RangeToInclusive<T>) -> Self {
@@ -1759,7 +1755,7 @@ impl<T> convert::From<RangeToInclusive<T>> for Interval<T>
 }
 
 // NOTE: Conflicts with From<T> convertion.
-// impl<T> convert::From<RangeFull> for Interval<T>
+// impl<T> From<RangeFull> for Interval<T>
 //     where T: PartialOrd + Ord + Clone
 // {
 //     fn from(r: RangeFull) -> Self {
@@ -1819,6 +1815,7 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Finite {
 }
 
 /// An `Iterator` over the points in an `Interval`.
+#[derive(Debug)]
 pub struct Iter<T> where T: PartialOrd + Ord + Clone {
     /// The `Interval` being iterated over.
     inner: Interval<T>,
