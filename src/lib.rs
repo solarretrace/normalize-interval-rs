@@ -41,7 +41,12 @@
 #![warn(variant_size_differences)]
 #![warn(while_true)]
 
+// NOTE: Specialization is used to allow normalization to be specialized for
+// Finite types. and remain a no-op for others.
 #![feature(specialization)]
+
+// NOTE: Associated type bounds are used to get max/min of finite types in
+//generic contexts without providing an instance.
 #![feature(associated_type_bounds)]
 
 // // Internal modules.

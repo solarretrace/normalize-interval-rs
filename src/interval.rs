@@ -1721,7 +1721,7 @@ impl<T> From<Range<T>> for Interval<T>
     }
 }
 
-// TODO(Sky): Fix RangeInclusive once the accessors become available.
+// TODO: Fix RangeInclusive once the accessors become available.
 // impl<T> From<RangeInclusive<T>> for Interval<T>
 //     where T: PartialOrd + Ord + Clone
 // {

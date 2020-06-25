@@ -162,4 +162,4 @@ std_integer_finite_impl![
 ];
 
 
-// TODO: Use nextUp and nextDown IEEE 754 functions to normalize float values.
+// TODO: Use nextUp and nextDown IEEE 754 functions to normalize float values?
