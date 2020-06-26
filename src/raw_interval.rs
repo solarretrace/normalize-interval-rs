@@ -13,7 +13,7 @@
 
 // Local imports.
 use crate::bound::Bound;
-use crate::utilities::Split;
+use crate::utility::Split;
 
 // Standard library imports.
 use std::fmt;

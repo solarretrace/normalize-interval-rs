@@ -16,7 +16,7 @@
 use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
 use crate::tine::Tine;
-use crate::utilities::Split;
+use crate::utility::Split;
 
 // Standard library imports.
 use std::collections::BTreeSet;

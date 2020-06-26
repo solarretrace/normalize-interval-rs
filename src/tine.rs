@@ -12,7 +12,7 @@
 // Local imports.
 use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
-use crate::utilities::Split;
+use crate::utility::Split;
 
 // Standard library imports.
 use std::cmp::Ordering;

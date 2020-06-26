@@ -53,7 +53,7 @@
 pub(crate) mod raw_interval;
 pub(crate) mod tine;
 pub(crate) mod tine_tree;
-pub(crate) mod utilities;
+pub(crate) mod utility;
 
 #[cfg(test)]
 mod test;
