@@ -16,7 +16,7 @@
 use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
 use crate::tine::Tine;
-use crate::utility::Split;
+use crate::utility::Few;
 
 // Standard library imports.
 use std::collections::BTreeSet;
@@ -281,11 +281,11 @@ impl<T> TineTree<T> where T: Ord + Clone {
         }
 
         match Tine::from_raw_interval(interval.clone()) {
-            Split::Zero                   => {
+            Few::Zero                   => {
                 *self = TineTree::new();
                 return;
             },
-            Split::One(Point(Include(p))) => {
+            Few::One(Point(Include(p))) => {
                 if self.contains(&p) {
                     *self = TineTree::from_raw_interval(RawInterval::Point(p));
                 } else {
@@ -293,7 +293,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
                 }
                 return;
             },
-            Split::Two(l, u)              => {
+            Few::Two(l, u)              => {
                 self.intersect_proper_interval(l, u)
             },
             _ => unreachable!("invalid Tine from interval"),
@@ -405,9 +405,9 @@ impl<T> TineTree<T> where T: Ord + Clone {
         }
 
         match Tine::from_raw_interval(interval.clone()) {
-            Split::Zero      => return,
-            Split::One(p)    => self.union_point_interval(p),
-            Split::Two(l, u) => self.union_proper_interval(l, u),
+            Few::Zero      => return,
+            Few::One(p)    => self.union_point_interval(p),
+            Few::Two(l, u) => self.union_proper_interval(l, u),
         }
     }
 
@@ -607,9 +607,9 @@ impl<T> TineTree<T> where T: Ord + Clone {
         }
 
         match Tine::from_raw_interval(interval.clone()) {
-            Split::Zero      => return,
-            Split::One(p)    => self.minus_point_interval(p),
-            Split::Two(l, u) => self.minus_proper_interval(l, u),
+            Few::Zero      => return,
+            Few::One(p)    => self.minus_point_interval(p),
+            Few::Two(l, u) => self.minus_proper_interval(l, u),
         }
     }
 
@@ -788,7 +788,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         }
     }
 
-    /// Splits the tine tree into three sections for an interval-like Tine for
+    /// Fews the tine tree into three sections for an interval-like Tine for
     /// an intersect.
     //
     // The array is returned with the following semantics:
@@ -843,7 +843,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         res
     }
 
-    /// Splits the tine tree into three sections for a point-like Tine for a
+    /// Fews the tine tree into three sections for a point-like Tine for a
     /// union.
     //
     // The array is returned with the following semantics:
@@ -871,7 +871,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
         res
     }
 
-    /// Splits the tine tree into three sections for an interval-like Tine for a
+    /// Fews the tine tree into three sections for an interval-like Tine for a
     /// union or minus.
     //
     // The array is returned with the following semantics:
@@ -1155,20 +1155,20 @@ impl<'t, T> DoubleEndedIterator for RawIntervalIter<'t, T>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TreeSplit
+// TreeFew
 ////////////////////////////////////////////////////////////////////////////////
 /// A `TineTree`s elements split out for simplified manipulation.
 #[derive(Debug)]
-struct TreeSplit<T> {
+struct TreeFew<T> {
     pub(crate) before: Option<Tine<T>>,
     pub(crate) lower: Option<Tine<T>>,
     pub(crate) upper: Option<Tine<T>>,
     pub(crate) after: Option<Tine<T>>,
 }
 
-impl<T> Default for TreeSplit<T> {
+impl<T> Default for TreeFew<T> {
     fn default() -> Self {
-        TreeSplit {
+        TreeFew {
             before: None,
             lower: None,
             upper: None,

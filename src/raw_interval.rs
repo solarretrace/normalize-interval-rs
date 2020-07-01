@@ -13,7 +13,7 @@
 
 // Local imports.
 use crate::bound::Bound;
-use crate::utility::Split;
+use crate::utility::Few;
 
 // Standard library imports.
 use std::fmt;
@@ -283,17 +283,17 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     pub fn complement(&self) -> impl Iterator<Item=Self> {
         use RawInterval::*;
         match *self {
-            Empty                   => Split::One(Full),
-            Point(ref p)            => Split::Two(UpTo(p.clone()), UpFrom(p.clone())),
-            Open(ref l, ref r)      => Split::Two(To(l.clone()), From(r.clone())),
-            LeftOpen(ref l, ref r)  => Split::Two(To(l.clone()), UpFrom(r.clone())),
-            RightOpen(ref l, ref r) => Split::Two(UpTo(l.clone()), From(r.clone())),
-            Closed(ref l, ref r)    => Split::Two(UpTo(l.clone()), UpFrom(r.clone())),
-            UpTo(ref p)             => Split::One(From(p.clone())),
-            UpFrom(ref p)           => Split::One(To(p.clone())),
-            To(ref p)               => Split::One(UpFrom(p.clone())),
-            From(ref p)             => Split::One(UpTo(p.clone())),
-            Full                    => Split::Zero,
+            Empty                   => Few::One(Full),
+            Point(ref p)            => Few::Two(UpTo(p.clone()), UpFrom(p.clone())),
+            Open(ref l, ref r)      => Few::Two(To(l.clone()), From(r.clone())),
+            LeftOpen(ref l, ref r)  => Few::Two(To(l.clone()), UpFrom(r.clone())),
+            RightOpen(ref l, ref r) => Few::Two(UpTo(l.clone()), From(r.clone())),
+            Closed(ref l, ref r)    => Few::Two(UpTo(l.clone()), UpFrom(r.clone())),
+            UpTo(ref p)             => Few::One(From(p.clone())),
+            UpFrom(ref p)           => Few::One(To(p.clone())),
+            To(ref p)               => Few::One(UpFrom(p.clone())),
+            From(ref p)             => Few::One(UpTo(p.clone())),
+            Full                    => Few::Zero,
         }
     }
 
@@ -324,15 +324,15 @@ impl<T> RawInterval<T> where T: PartialOrd + Ord + Clone {
     /// contained within this interval and the given interval., vec![a, b]);
     pub fn union(&self, other: &Self) -> impl Iterator<Item=Self> {
         match (self.is_empty(), other.is_empty()) {
-            (true,  true)  => Split::Zero,
-            (true,  false) => Split::One(other.clone()),
-            (false, true)  => Split::One(self.clone()),
+            (true,  true)  => Few::Zero,
+            (true,  false) => Few::One(other.clone()),
+            (false, true)  => Few::One(self.clone()),
             (false, false) => {
                 // if self.lb > other.ub || other.lb < self.ub
                 if self.intersects(other) || self.adjacent(other) {
-                    Split::One(self.enclose(other))
+                    Few::One(self.enclose(other))
                 } else {
-                    Split::Two(self.clone(), other.clone())
+                    Few::Two(self.clone(), other.clone())
                 }
             },
         }

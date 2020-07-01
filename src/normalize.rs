@@ -26,7 +26,7 @@ use crate::raw_interval::RawInterval;
 pub trait Finite: Sized {
     /// The minimum value of the type.
     const MINIMUM: Self;
-    
+
     /// The maximum value of the type.
     const MAXIMUM: Self;
 

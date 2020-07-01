@@ -1,6 +1,6 @@
 [package]
 name = "interval"
-version = "0.12.8"
+version = "0.12.9"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 edition = "2018"
 license = "MIT or Apache-2.0"
@@ -19,6 +19,11 @@ name = "interval"
 
 [features]
 default = []
+
+
+# Required dependencies
+[dependencies]
+few = { version = "0.0.1" }
 
 # The development profile, used for `cargo build`
 [profile.dev]

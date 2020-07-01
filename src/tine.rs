@@ -12,7 +12,7 @@
 // Local imports.
 use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
-use crate::utility::Split;
+use crate::utility::Few;
 
 // Standard library imports.
 use std::cmp::Ordering;
@@ -39,22 +39,22 @@ pub(crate) enum Tine<T> {
 
 impl<T> Tine<T> where T: PartialOrd + Ord + Clone {
     /// Returns the set of `Tine`s representing the given interval.
-    pub(crate) fn from_raw_interval(interval: RawInterval<T>) -> Split<Self> {
+    pub(crate) fn from_raw_interval(interval: RawInterval<T>) -> Few<Self> {
         use RawInterval::*;
         use Bound::*;
         use Tine::{ Lower, Upper };
         match interval {
-            Empty           => Split::Zero,
-            Point(p)        => Split::One(Tine::Point(Include(p))),
-            Open(l, r)      => Split::Two(Lower(Exclude(l)), Upper(Exclude(r))),
-            LeftOpen(l, r)  => Split::Two(Lower(Exclude(l)), Upper(Include(r))),
-            RightOpen(l, r) => Split::Two(Lower(Include(l)), Upper(Exclude(r))),
-            Closed(l, r)    => Split::Two(Lower(Include(l)), Upper(Include(r))),
-            UpTo(r)         => Split::Two(Lower(Infinite),   Upper(Exclude(r))),
-            UpFrom(l)       => Split::Two(Lower(Exclude(l)), Upper(Infinite)),
-            To(r)           => Split::Two(Lower(Infinite),   Upper(Include(r))),
-            From(l)         => Split::Two(Lower(Include(l)), Upper(Infinite)),
-            Full            => Split::Two(Lower(Infinite),   Upper(Infinite)),
+            Empty           => Few::Zero,
+            Point(p)        => Few::One(Tine::Point(Include(p))),
+            Open(l, r)      => Few::Two(Lower(Exclude(l)), Upper(Exclude(r))),
+            LeftOpen(l, r)  => Few::Two(Lower(Exclude(l)), Upper(Include(r))),
+            RightOpen(l, r) => Few::Two(Lower(Include(l)), Upper(Exclude(r))),
+            Closed(l, r)    => Few::Two(Lower(Include(l)), Upper(Include(r))),
+            UpTo(r)         => Few::Two(Lower(Infinite),   Upper(Exclude(r))),
+            UpFrom(l)       => Few::Two(Lower(Exclude(l)), Upper(Infinite)),
+            To(r)           => Few::Two(Lower(Infinite),   Upper(Include(r))),
+            From(l)         => Few::Two(Lower(Include(l)), Upper(Infinite)),
+            Full            => Few::Two(Lower(Infinite),   Upper(Infinite)),
         }
     }
 
