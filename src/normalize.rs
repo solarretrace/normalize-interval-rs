@@ -24,17 +24,17 @@ use crate::raw_interval::RawInterval;
 /// [`Normalize`]: trait.Normalize.html
 /// [`Interval`]: ../interval/struct.Interval.html
 pub trait Finite: Sized {
+    /// The minimum value of the type.
+    const MINIMUM: Self;
+    
+    /// The maximum value of the type.
+    const MAXIMUM: Self;
+
     /// Returns the previous element before the given one.
     fn pred(&self) -> Option<Self>;
 
     /// Returns the next element after the given one.
     fn succ(&self) -> Option<Self>;
-
-    /// Returns the minimum element. 
-    fn minimum() -> Self;
-
-    /// Returns the maximum element.
-    fn maximum() -> Self;
 }
 
 
@@ -88,11 +88,11 @@ impl<T> Normalize for RawInterval<T> where T: Finite {
             LeftOpen(l, r)  => l.succ().map_or(Empty, |l| Closed(l, r)),
             RightOpen(l, r) => r.pred().map_or(Empty, |r| Closed(l, r)),
             Closed(l, r)    => Closed(l, r),
-            UpTo(r)         => r.pred().map_or(Empty, |r| Closed(T::minimum(), r)),
-            UpFrom(l)       => l.succ().map_or(Empty, |l| Closed(l, T::maximum())),
-            To(p)           => Closed(T::minimum(), p),
-            From(p)         => Closed(p, T::maximum()),
-            Full            => Closed(T::minimum(), T::maximum()),
+            UpTo(r)         => r.pred().map_or(Empty, |r| Closed(T::MINIMUM, r)),
+            UpFrom(l)       => l.succ().map_or(Empty, |l| Closed(l, T::MAXIMUM)),
+            To(p)           => Closed(T::MINIMUM, p),
+            From(p)         => Closed(p, T::MAXIMUM),
+            Full            => Closed(T::MINIMUM, T::MAXIMUM),
         }
     }
 
@@ -140,6 +140,9 @@ macro_rules! std_integer_finite_impl {
     // For each given type...
     ($($t:ident),*) => {
         $(impl Finite for $t {
+            const MINIMUM: $t = {std::$t::MIN};
+            const MAXIMUM: $t = {std::$t::MAX};
+
             fn pred(&self) -> Option<Self> {
                 if *self != std::$t::MIN {Some(self - 1)} else {None}
             }
@@ -147,10 +150,6 @@ macro_rules! std_integer_finite_impl {
             fn succ(&self) -> Option<Self> {
                 if *self != std::$t::MAX {Some(self + 1)} else {None}
             }
-
-            fn minimum() -> Self {std::$t::MIN}
-
-            fn maximum() -> Self {std::$t::MAX}
         })*
     };
 }

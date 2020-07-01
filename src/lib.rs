@@ -45,10 +45,6 @@
 // Finite types. and remain a no-op for others.
 #![feature(specialization)]
 
-// NOTE: Associated type bounds are used to get max/min of finite types in
-//generic contexts without providing an instance.
-#![feature(associated_type_bounds)]
-
 // // Internal modules.
 pub(crate) mod raw_interval;
 pub(crate) mod tine;
