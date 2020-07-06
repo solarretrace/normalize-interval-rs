@@ -30,7 +30,7 @@ use std::iter::FromIterator;
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly noncontiguous collection of `Interval`s of the type `T`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Selection<T>(TineTree<T>) where T: Ord + Clone;
+pub struct Selection<T>(TineTree<T>);
 
 // All intervals in the `TineTree` must be denormalized before insert and
 // normalized before return. This ensures proper merging of adjacent normalized
@@ -830,7 +830,7 @@ impl<T> Selection<T>
 // Default
 ////////////////////////////////////////////////////////////////////////////////
 impl<T> Default for Selection<T> 
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn default() -> Self {
         Selection::new()
@@ -842,7 +842,7 @@ impl<T> Default for Selection<T>
 // Special iterator traits
 ////////////////////////////////////////////////////////////////////////////////
 impl<T> Extend<Interval<T>> for Selection<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn extend<I>(&mut self, iter: I) where I: IntoIterator<Item=Interval<T>> {
         for interval in iter.into_iter() {
@@ -858,7 +858,7 @@ impl<T> Extend<Interval<T>> for Selection<T>
 ////////////////////////////////////////////////////////////////////////////////
 impl<T> From<Interval<T>> for Selection<T>
     where
-        T: PartialOrd + Ord + Clone,
+        T: Ord + Clone,
         RawInterval<T>: Normalize 
 {
     fn from(interval: Interval<T>) -> Self {
@@ -868,7 +868,7 @@ impl<T> From<Interval<T>> for Selection<T>
 }
 
 impl<T> FromIterator<Interval<T>> for Selection<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from_iter<I>(iter: I) -> Self where I: IntoIterator<Item=Interval<T>> {
         let mut selection = Selection::new();
@@ -881,7 +881,7 @@ impl<T> FromIterator<Interval<T>> for Selection<T>
 }
 
 impl<T> IntoIterator for Selection<T>
-    where T: PartialOrd + Ord + Clone 
+    where T: Ord + Clone 
 {
     type Item = Interval<T>;
     type IntoIter = IntoIter<T>;
@@ -900,7 +900,7 @@ impl<T> IntoIterator for Selection<T>
 pub struct IntoIter<T>(tine_tree::IntoIter<T>);
 
 impl<T> Iterator for IntoIter<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     type Item = Interval<T>;
 
@@ -913,7 +913,7 @@ impl<T> Iterator for IntoIter<T>
 }
 
 impl<T> DoubleEndedIterator for IntoIter<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.0
@@ -930,10 +930,10 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 /// An `Iterator` over the `Interval`s of a `Selection`.
 #[derive(Debug)]
 pub struct IntervalIter<'t, T>(RawIntervalIter<'t, T>)
-    where T: PartialOrd + Ord + Clone;
+    where T: Ord + Clone;
 
 impl<'t, T> Iterator for IntervalIter<'t, T> 
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     type Item = Interval<T>;
 
@@ -947,7 +947,7 @@ impl<'t, T> Iterator for IntervalIter<'t, T>
 
 
 impl<'t, T> DoubleEndedIterator for IntervalIter<'t, T> 
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.0

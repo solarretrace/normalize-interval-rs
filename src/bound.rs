@@ -415,7 +415,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the union of the given boundaries, or the lowest one if they are
     /// not at the same point.
-    pub(crate) fn least_union(&self, other: &Self) -> Self {
+    pub(in crate) fn least_union(&self, other: &Self) -> Self {
         match (self, other) {
             (&Include(ref p), &Include(ref o))
                 => if p < o {Include(p.clone())} else {Include(o.clone())},
@@ -435,7 +435,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the intersect of the given boundaries, or the lowest one if they
     /// are not at the same point.
-    pub(crate) fn least_intersect(&self, other: &Self) -> Self {
+    pub(in crate) fn least_intersect(&self, other: &Self) -> Self {
         match (self, other) {
             (&Include(ref p), &Include(ref o))
                 => if p < o {Include(p.clone())} else {Include(o.clone())},
@@ -463,7 +463,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the union of the given boundaries, or the greatest one if they 
     /// are not at the same point.
-    pub(crate) fn greatest_union(&self, other: &Self) -> Self {
+    pub(in crate) fn greatest_union(&self, other: &Self) -> Self {
         match (self, other) {
             (&Include(ref p), &Include(ref o))
                 => if p > o {Include(p.clone())} else {Include(o.clone())},
@@ -483,7 +483,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the intersect of the given boundaries, or the greatest one if 
     /// they are not at the same point.
-    pub(crate) fn greatest_intersect(&self, other: &Self) -> Self {
+    pub(in crate) fn greatest_intersect(&self, other: &Self) -> Self {
         match (self, other) {
             (&Include(ref p), &Include(ref o))
                 => if p > o {Include(p.clone())} else {Include(o.clone())},
@@ -511,7 +511,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns `true` if the `Bound` points are considered adjacent under a
     /// union.
-    pub(crate) fn union_adjacent(&self, other: &Self) -> bool {
+    pub(in crate) fn union_adjacent(&self, other: &Self) -> bool {
         match (self, other) {
             (&Include(ref p), &Include(ref o)) |
             (&Include(ref p), &Exclude(ref o)) |

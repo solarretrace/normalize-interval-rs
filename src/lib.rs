@@ -46,11 +46,11 @@
 #![feature(specialization)]
 
 // // Internal modules.
-pub(crate) mod raw_interval;
-pub(crate) mod tine;
-pub(crate) mod tine_tree;
-pub(crate) mod utility {
-    pub(crate) use few::Few;
+pub(in crate) mod raw_interval;
+pub(in crate) mod tine;
+pub(in crate) mod tine_tree;
+pub(in crate) mod utility {
+    pub(in crate) use few::Few;
 }
 
 #[cfg(test)]

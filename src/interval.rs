@@ -45,7 +45,7 @@ pub struct Interval<T>(pub (crate) RawInterval<T>);
 // interval is normalized before returning.
 impl<T> Interval<T> 
     where 
-        T: PartialOrd + Ord + Clone,
+        T: Ord + Clone,
         RawInterval<T>: Normalize 
 {
     ////////////////////////////////////////////////////////////////////////////
@@ -1692,7 +1692,7 @@ impl<T> Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<T> From<RawInterval<T>> for Interval<T> 
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(raw_interval: RawInterval<T>) -> Self {
         Interval(raw_interval.normalized())
@@ -1701,7 +1701,7 @@ impl<T> From<RawInterval<T>> for Interval<T>
 
 // NOTE: Conflicts with From<RangeFull> convertion.
 impl<T> From<T> for Interval<T> 
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(point: T) -> Self {
         Interval(RawInterval::Point(point).normalized())
@@ -1713,7 +1713,7 @@ impl<T> From<T> for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<T> From<Range<T>> for Interval<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(r: Range<T>) -> Self {
         Interval(RawInterval::right_open(r.start, r.end).normalized())
@@ -1722,7 +1722,7 @@ impl<T> From<Range<T>> for Interval<T>
 
 // TODO: Fix RangeInclusive once the accessors become available.
 // impl<T> From<RangeInclusive<T>> for Interval<T>
-//     where T: PartialOrd + Ord + Clone
+//     where T: Ord + Clone
 // {
 //     fn from(r: RangeInclusive<T>) -> Self {
 //         Interval(RawInterval::closed(r.next().unwrap(), r.next_back().unwrap()).normalized())
@@ -1730,7 +1730,7 @@ impl<T> From<Range<T>> for Interval<T>
 // }
 
 impl<T> From<RangeFrom<T>> for Interval<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(r: RangeFrom<T>) -> Self {
         Interval(RawInterval::From(r.start).normalized())
@@ -1738,7 +1738,7 @@ impl<T> From<RangeFrom<T>> for Interval<T>
 }
 
 impl<T> From<RangeTo<T>> for Interval<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(r: RangeTo<T>) -> Self {
         Interval(RawInterval::UpTo(r.end).normalized())
@@ -1746,7 +1746,7 @@ impl<T> From<RangeTo<T>> for Interval<T>
 }
 
 impl<T> From<RangeToInclusive<T>> for Interval<T>
-    where T: PartialOrd + Ord + Clone
+    where T: Ord + Clone
 {
     fn from(r: RangeToInclusive<T>) -> Self {
         Interval(RawInterval::To(r.end).normalized())
@@ -1755,7 +1755,7 @@ impl<T> From<RangeToInclusive<T>> for Interval<T>
 
 // NOTE: Conflicts with From<T> convertion.
 // impl<T> From<RangeFull> for Interval<T>
-//     where T: PartialOrd + Ord + Clone
+//     where T: Ord + Clone
 // {
 //     fn from(r: RangeFull) -> Self {
 //         Interval(RawInterval::full().normalized())
@@ -1765,7 +1765,7 @@ impl<T> From<RangeToInclusive<T>> for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 // Default
 ////////////////////////////////////////////////////////////////////////////////
-impl<T> Default for Interval<T> where T: PartialOrd + Ord + Clone {
+impl<T> Default for Interval<T> where T: Ord + Clone {
     fn default() -> Self {
         Interval::empty()
     }
@@ -1775,7 +1775,7 @@ impl<T> Default for Interval<T> where T: PartialOrd + Ord + Clone {
 ////////////////////////////////////////////////////////////////////////////////
 // Finite iteration support
 ////////////////////////////////////////////////////////////////////////////////
-impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Finite {
+impl<T> Interval<T> where T: Ord + Clone + Finite {
     /// Returns an `Iterator` over the points in the `Interval`. Only defined
     /// for `Finite` `Interval`s.
     ///
@@ -1815,13 +1815,13 @@ impl<T> Interval<T> where T: PartialOrd + Ord + Clone + Finite {
 
 /// An `Iterator` over the points in an `Interval`.
 #[derive(Debug)]
-pub struct Iter<T> where T: PartialOrd + Ord + Clone {
+pub struct Iter<T> where T: Ord + Clone {
     /// The `Interval` being iterated over.
     inner: Interval<T>,
 }
 
 impl<T> Iterator for Iter<T>
-    where T: PartialOrd + Ord + Clone + Finite
+    where T: Ord + Clone + Finite
 {
     type Item = T;
 
@@ -1841,7 +1841,7 @@ impl<T> Iterator for Iter<T>
 }
 
 impl<T> DoubleEndedIterator for Iter<T>
-    where T: PartialOrd + Ord + Clone + Finite
+    where T: Ord + Clone + Finite
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.inner.upper_bound() {
