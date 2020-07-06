@@ -39,8 +39,7 @@ use std::ops::Sub;
 /// [`Normalize`]: ../normalize/trait.Normalize.html
 /// [`Finite`]: ../normalize/trait.Finite.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Interval<T>(pub (crate) RawInterval<T>)
-    where T: PartialOrd + Ord + Clone;
+pub struct Interval<T>(pub (crate) RawInterval<T>);
 
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.

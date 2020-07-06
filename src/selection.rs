@@ -30,14 +30,14 @@ use std::iter::FromIterator;
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly noncontiguous collection of `Interval`s of the type `T`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Selection<T>(TineTree<T>) where T: PartialOrd + Ord + Clone;
+pub struct Selection<T>(TineTree<T>) where T: Ord + Clone;
 
 // All intervals in the `TineTree` must be denormalized before insert and
 // normalized before return. This ensures proper merging of adjacent normalized
 // intervals.
 impl<T> Selection<T> 
     where 
-        T: PartialOrd + Ord + Clone,
+        T: Ord + Clone,
         RawInterval<T>: Normalize 
 {
     ////////////////////////////////////////////////////////////////////////////
