@@ -1,21 +1,21 @@
 [package]
-name = "interval"
+name = "normalize_interval"
 version = "0.13.0"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 edition = "2018"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 # maintenance = { status = "experiemental" }
-repository = "https://github.com/skysch/interval-rs"
-description = "Interval library"
+repository = "https://github.com/skysch/normalize_interval-rs"
+description = "Normalizing interval library"
 readme = "readme.md"
-keywords = ["range", "interval", "selection", "set", "span"]
+keywords = ["range", "interval", "selection", "set"]
 categories = []
 documentation = ""
-homepage = ""
+homepage = "https://github.com/skysch/normalize_interval-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
 
 [lib]
-name = "interval"
+name = "normalize_interval"
 
 [features]
 default = []

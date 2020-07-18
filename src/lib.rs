@@ -41,10 +41,6 @@
 #![warn(variant_size_differences)]
 #![warn(while_true)]
 
-// NOTE: Specialization is used to allow normalization to be specialized for
-// Finite types. and remain a no-op for others.
-// #![feature(specialization)]
-
 // // Internal modules.
 pub(in crate) mod raw_interval;
 pub(in crate) mod tine;

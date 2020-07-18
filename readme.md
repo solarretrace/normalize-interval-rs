@@ -1,14 +1,20 @@
 Overview
 ========
 
-This library (`Interval`) provides an implementation of range and interval types as an alternative to the std library's `Range` and related types. The reasoning for this alternative is that `Interval` provides machinery for the normalization of (finite) intervals. This reduces ambiguity and enhances analysis of finite types.
+This library provides an alternative to the std [`Range`](https://doc.rust-lang.org/stable/std/ops/struct.Range.html) types which supports finite interval normalization. When used with a bounded, finite data type, the interval will support set operations (unions, intersections, etc), and iteration over potentially disjoint sets of intervals can be represented efficiently as a tree of interval bounds.
 
 Usage
 =====
 
 Add this line to your crate's Cargo.toml file:
 
-interval = "0.12.4"
+interval = "0.13.0"
+
+
+Representations for infinite intervals
+======================================
+
+This library was previously designed to support infinite and finite data types, utilizing trait specialization to make normalization of infinite intervals a no-op. To allow building on stable, this feature has been disabled, so `Interval<T>` and `Selection<T>` are only usable if `T: Finite`. As such, there are many methods defined for selections and intervals which are essentially useless, as all intervals will be normalized into a closed representation after construction.
 
 
 What is interval normalization?
