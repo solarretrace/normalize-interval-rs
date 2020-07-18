@@ -1157,20 +1157,20 @@ impl<'t, T> DoubleEndedIterator for Iter<'t, T>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TreeFew
+// TreeSplit
 ////////////////////////////////////////////////////////////////////////////////
 /// A `TineTree`s elements split out for simplified manipulation.
 #[derive(Debug)]
-struct TreeFew<T> {
+struct TreeSplit<T> {
     pub(in crate) before: Option<Tine<T>>,
     pub(in crate) lower: Option<Tine<T>>,
     pub(in crate) upper: Option<Tine<T>>,
     pub(in crate) after: Option<Tine<T>>,
 }
 
-impl<T> Default for TreeFew<T> {
+impl<T> Default for TreeSplit<T> {
     fn default() -> Self {
-        TreeFew {
+        TreeSplit {
             before: None,
             lower: None,
             upper: None,
