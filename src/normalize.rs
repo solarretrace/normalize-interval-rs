@@ -68,15 +68,15 @@ pub trait Normalize {
 ////////////////////////////////////////////////////////////////////////////////
 // Normalize implementations
 ////////////////////////////////////////////////////////////////////////////////
-/// General 'do nothing' implementation for all intervals.
-impl<T> Normalize for RawInterval<T> {
-    default fn normalize(&mut self) {/* Do nothing. */}
-    default fn denormalize(&mut self) {/* Do nothing. */}
-}
+// /// General 'do nothing' implementation for all intervals.
+// impl<T> Normalize for RawInterval<T> {
+//     default fn normalize(&mut self) {/* Do nothing. */}
+//     default fn denormalize(&mut self) {/* Do nothing. */}
+// }
 
 /// Specialization for [`Finite`] intervals.
 impl<T> Normalize for RawInterval<T> where T: Finite {
-    default fn normalize(&mut self) {
+    fn normalize(&mut self) {
         use RawInterval::*;
         *self = match std::mem::replace(self, Empty) {
             Empty           => Empty,
@@ -96,7 +96,7 @@ impl<T> Normalize for RawInterval<T> where T: Finite {
         }
     }
 
-    default fn denormalize(&mut self) {
+    fn denormalize(&mut self) {
         use RawInterval::*;
         *self = match std::mem::replace(self, Empty) {
             Empty           => Empty,

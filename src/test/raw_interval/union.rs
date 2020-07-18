@@ -14,10 +14,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Local imports.
-use raw_interval::RawInterval;
+use crate::raw_interval::RawInterval;
 
 // Local enum shortcuts.
-use raw_interval::RawInterval::*;
+use crate::raw_interval::RawInterval::*;
 
 
 #[test]

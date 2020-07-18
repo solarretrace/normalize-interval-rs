@@ -51,7 +51,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Include(15);
     /// assert_eq!(x.is_finite(), true);
@@ -79,7 +79,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Include(15);
     /// assert_eq!(x.is_inclusive(), true);
@@ -107,7 +107,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(15);
     /// assert_eq!(x.is_exclusive(), true);
@@ -140,7 +140,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(34);
     ///
@@ -169,7 +169,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut x: Bound<i32> = Bound::Exclude(34);
     ///
@@ -213,7 +213,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(34);
     /// assert_eq!(x.unwrap(), 34);
@@ -225,7 +225,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust{.should_panic}
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Infinite;
     /// assert_eq!(x.unwrap(), 34); // fails
@@ -250,7 +250,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Exclude(34).unwrap_or(15), 34);
     /// assert_eq!(Bound::Infinite.unwrap_or(15), 15);
@@ -274,7 +274,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let k = 10;
     /// assert_eq!(Bound::Exclude(34).unwrap_or_else(|| 2 * k), 34);
@@ -304,7 +304,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<u32> = Bound::Include(10);
     /// let y: Bound<usize> = x.map(|v| v as usize);
@@ -333,7 +333,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Include(10).map_or(6, |k| k * 2), 20);
     /// # //-------------------------------------------------------------------
@@ -359,7 +359,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Include(10).map_or_else(|| 6, |k| k * 2), 20);
     /// assert_eq!(Bound::Infinite.map_or_else(|| 6, |k: u32| k * 2), 6);
@@ -391,7 +391,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Bound;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::transfer(Bound::Exclude(34), 18);
     ///

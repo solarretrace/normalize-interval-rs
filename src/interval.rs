@@ -44,9 +44,9 @@ pub struct Interval<T>(pub (crate) RawInterval<T>);
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.
 impl<T> Interval<T> 
-    where 
+    where
         T: Ord + Clone,
-        RawInterval<T>: Normalize 
+        RawInterval<T>: Normalize,
 {
     ////////////////////////////////////////////////////////////////////////////
     // Constructors
@@ -62,7 +62,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::new(Include(3), Exclude(7));
     /// # //-------------------------------------------------------------------
@@ -78,7 +78,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::new(Exclude(-3), Exclude(7));
     ///
@@ -94,7 +94,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::new(Exclude(7), Exclude(-7));
     ///
@@ -116,7 +116,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::empty();
     /// # //-------------------------------------------------------------------
@@ -136,7 +136,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::point(3);
     /// # //-------------------------------------------------------------------
@@ -156,7 +156,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(3, 7);
     /// # //-------------------------------------------------------------------
@@ -172,7 +172,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 7);
     ///
@@ -188,7 +188,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(7, -7);
     ///
@@ -209,7 +209,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_open(3, 7);
     /// # //-------------------------------------------------------------------
@@ -225,7 +225,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_open(-3, 7);
     ///
@@ -241,7 +241,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_open(7, -7);
     ///
@@ -257,7 +257,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_open(5, 5);
     ///
@@ -278,7 +278,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_open(3, 7);
     /// # //-------------------------------------------------------------------
@@ -294,7 +294,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_open(-3, 7);
     ///
@@ -310,7 +310,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_open(7, -7);
     ///
@@ -326,7 +326,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_open(5, 5);
     ///
@@ -347,7 +347,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(3, 7);
     /// # //-------------------------------------------------------------------
@@ -361,7 +361,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(7, -7);
     ///
@@ -377,7 +377,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(5, 5);
     ///
@@ -398,7 +398,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_closed(3, 7);
     /// # //-------------------------------------------------------------------
@@ -414,7 +414,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_closed(-3, 7);
     ///
@@ -430,7 +430,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_closed(7, -7);
     ///
@@ -446,7 +446,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::left_closed(5, 5);
     ///
@@ -467,7 +467,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_closed(3, 7);
     /// # //-------------------------------------------------------------------
@@ -483,7 +483,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_closed(-3, 7);
     ///
@@ -499,7 +499,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_closed(7, -7);
     ///
@@ -515,7 +515,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::right_closed(5, 5);
     ///
@@ -537,7 +537,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_from(3);
     /// # //-------------------------------------------------------------------
@@ -554,7 +554,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_from(7);
     ///
@@ -576,7 +576,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_to(3);
     /// # //-------------------------------------------------------------------
@@ -593,7 +593,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_to(7);
     ///
@@ -615,7 +615,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_up_from(3);
     /// # //-------------------------------------------------------------------
@@ -632,7 +632,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_up_from(7);
     ///
@@ -654,7 +654,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_up_to(3);
     /// # //-------------------------------------------------------------------
@@ -671,7 +671,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::unbounded_up_to(7);
     ///
@@ -692,7 +692,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::full();
     /// # //-------------------------------------------------------------------
@@ -709,7 +709,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::full();
     ///
@@ -735,7 +735,7 @@ impl<T> Interval<T>
     /// # use interval::Bound::*;
     /// # use interval::Interval;
     /// # use std::i32;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(0, 4);
     /// assert_eq!(interval.into_non_empty(), Some(Interval::closed(0, 4)));
@@ -770,7 +770,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.lower_bound(), Some(Include(-3)));
@@ -787,7 +787,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 5);
     /// 
@@ -813,7 +813,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.upper_bound(), Some(Include(5)));
@@ -830,7 +830,7 @@ impl<T> Interval<T>
     /// # use std::error::Error;
     /// # use interval::Bound::*;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 5);
     /// 
@@ -854,7 +854,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.infimum(), Some(-3));
@@ -870,7 +870,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 5);
     /// 
@@ -895,7 +895,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.supremum(), Some(5));
@@ -911,7 +911,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 5);
     /// 
@@ -933,7 +933,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 7);
     /// assert_eq!(interval.size(), Some(10));
@@ -959,7 +959,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_empty(), false);
@@ -985,7 +985,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_degenerate(), false);
@@ -1011,7 +1011,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_proper(), true);
@@ -1042,10 +1042,10 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::left_open(Some(-3), Some(5));
-    /// assert_eq!(interval.is_open(), true);
+    /// let interval: Interval<i32> = Interval::left_open(-3, 5);
+    /// assert_eq!(interval.is_open(), false);
     ///
     /// let interval: Interval<i32> = Interval::point(4);
     /// assert_eq!(interval.is_open(), false);
@@ -1059,13 +1059,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::empty();
     /// assert_eq!(interval.is_open(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
-    /// assert_eq!(interval.is_open(), true);
+    /// let interval: Interval<i32> = Interval::full();
+    /// assert_eq!(interval.is_open(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1086,10 +1086,10 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::left_open(Some(-3), Some(5));
-    /// assert_eq!(interval.is_left_open(), true);
+    /// let interval: Interval<i32> = Interval::left_open(-3, 5);
+    /// assert_eq!(interval.is_left_open(), false);
     ///
     /// let interval: Interval<i32> = Interval::closed(2, 4);
     /// assert_eq!(interval.is_left_open(), false);
@@ -1103,13 +1103,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(4));
-    /// assert_eq!(interval.is_left_open(), true);
+    /// let interval: Interval<i32> = Interval::unbounded_to(4);
+    /// assert_eq!(interval.is_left_open(), false);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
-    /// assert_eq!(interval.is_left_open(), true);
+    /// let interval: Interval<i32> = Interval::full();
+    /// assert_eq!(interval.is_left_open(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1132,10 +1132,10 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::right_open(Some(-3), Some(5));
-    /// assert_eq!(interval.is_right_open(), true);
+    /// let interval: Interval<i32> = Interval::right_open(-3, 5);
+    /// assert_eq!(interval.is_right_open(), false);
     ///
     /// let interval: Interval<i32> = Interval::closed(2, 4);
     /// assert_eq!(interval.is_right_open(), false);
@@ -1149,13 +1149,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_from(Some(4));
-    /// assert_eq!(interval.is_right_open(), true);
+    /// let interval: Interval<i32> = Interval::unbounded_from(4);
+    /// assert_eq!(interval.is_right_open(), false);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
-    /// assert_eq!(interval.is_right_open(), true);
+    /// let interval: Interval<i32> = Interval::full();
+    /// assert_eq!(interval.is_right_open(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1178,10 +1178,10 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::left_open(Some(-3), Some(5));
-    /// assert_eq!(interval.is_half_open(), true);
+    /// let interval: Interval<i32> = Interval::left_open(-3, 5);
+    /// assert_eq!(interval.is_half_open(), false);
     ///
     /// let interval: Interval<i32> = Interval::closed(2, 4);
     /// assert_eq!(interval.is_half_open(), false);
@@ -1195,13 +1195,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(4));
-    /// assert_eq!(interval.is_half_open(), true);
+    /// let interval: Interval<i32> = Interval::unbounded_to(4);
+    /// assert_eq!(interval.is_half_open(), false);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
-    /// assert_eq!(interval.is_half_open(), true);
+    /// let interval: Interval<i32> = Interval::full();
+    /// assert_eq!(interval.is_half_open(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1223,13 +1223,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_closed(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::left_open(Some(-2), Some(4));
-    /// assert_eq!(interval.is_closed(), false);
+    /// let interval: Interval<i32> = Interval::left_open(-2, 4);
+    /// assert_eq!(interval.is_closed(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1240,12 +1240,12 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::empty();
     /// assert_eq!(interval.is_closed(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
+    /// let interval: Interval<i32> = Interval::full();
     /// assert_eq!(interval.is_closed(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -1269,13 +1269,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_left_closed(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::left_open(Some(-2), Some(4));
-    /// assert_eq!(interval.is_left_closed(), false);
+    /// let interval: Interval<i32> = Interval::left_open(-2, 4);
+    /// assert_eq!(interval.is_left_closed(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1298,13 +1298,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(-3, 5);
     /// assert_eq!(interval.is_right_closed(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::right_open(Some(-2), Some(4));
-    /// assert_eq!(interval.is_right_closed(), false);
+    /// let interval: Interval<i32> = Interval::right_open(-2, 4);
+    /// assert_eq!(interval.is_right_closed(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1327,12 +1327,12 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(-3));
-    /// assert_eq!(interval.is_half_closed(), true);
+    /// let interval: Interval<i32> = Interval::unbounded_to(-3);
+    /// assert_eq!(interval.is_half_closed(), false);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
+    /// let interval: Interval<i32> = Interval::open(-2, 4);
     /// assert_eq!(interval.is_half_closed(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -1356,13 +1356,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
+    /// let interval: Interval<i32> = Interval::open(-2, 4);
     /// assert_eq!(interval.is_left_bounded(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(-3));
-    /// assert_eq!(interval.is_left_bounded(), false);
+    /// let interval: Interval<i32> = Interval::unbounded_to(-3);
+    /// assert_eq!(interval.is_left_bounded(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1386,13 +1386,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
+    /// let interval: Interval<i32> = Interval::open(-2, 4);
     /// assert_eq!(interval.is_left_bounded(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(-3));
-    /// assert_eq!(interval.is_left_bounded(), false);
+    /// let interval: Interval<i32> = Interval::unbounded_to(-3);
+    /// assert_eq!(interval.is_left_bounded(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1415,13 +1415,13 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::open(Some(-2), Some(4));
+    /// let interval: Interval<i32> = Interval::open(-2, 4);
     /// assert_eq!(interval.is_right_bounded(), true);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_from(Some(-3));
-    /// assert_eq!(interval.is_right_bounded(), false);
+    /// let interval: Interval<i32> = Interval::unbounded_from(-3);
+    /// assert_eq!(interval.is_right_bounded(), true);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1443,12 +1443,12 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::unbounded_to(Some(-2));
-    /// assert_eq!(interval.is_half_bounded(), true);
+    /// let interval: Interval<i32> = Interval::unbounded_to(-2);
+    /// assert_eq!(interval.is_half_bounded(), false);
     ///
-    /// let interval: Interval<Option<i32>> = Interval::full();
+    /// let interval: Interval<i32> = Interval::full();
     /// assert_eq!(interval.is_half_bounded(), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -1473,7 +1473,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::closed(0, 20);
     /// assert_eq!(interval.contains(&2), true);
@@ -1499,7 +1499,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 5);
     /// let b: Interval<i32> = Interval::closed(4, 15);
@@ -1524,7 +1524,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 5);
     /// let b: Interval<i32> = Interval::closed(5, 15);
@@ -1554,7 +1554,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(-3, 5);
     /// 
@@ -1579,7 +1579,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 7);
     /// let b: Interval<i32> = Interval::closed(4, 13);
@@ -1600,7 +1600,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 7);
     /// let b: Interval<i32> = Interval::closed(4, 13);
@@ -1626,7 +1626,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 7);
     /// let b: Interval<i32> = Interval::closed(4, 13);
@@ -1652,7 +1652,7 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 5);
     /// let b: Interval<i32> = Interval::closed(9, 13);
@@ -1673,10 +1673,10 @@ impl<T> Interval<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    /// let interval: Interval<Option<i32>> = Interval::open(Some(-3), Some(7));
-    /// assert_eq!(interval.closure(), Interval::closed(Some(-3), Some(7)));
+    /// let interval: Interval<i32> = Interval::open(-3, 7);
+    /// assert_eq!(interval.closure(), Interval::closed(-2, 6));
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -1692,7 +1692,9 @@ impl<T> Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<T> From<RawInterval<T>> for Interval<T> 
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(raw_interval: RawInterval<T>) -> Self {
         Interval(raw_interval.normalized())
@@ -1701,7 +1703,9 @@ impl<T> From<RawInterval<T>> for Interval<T>
 
 // NOTE: Conflicts with From<RangeFull> convertion.
 impl<T> From<T> for Interval<T> 
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(point: T) -> Self {
         Interval(RawInterval::Point(point).normalized())
@@ -1713,7 +1717,9 @@ impl<T> From<T> for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<T> From<Range<T>> for Interval<T>
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(r: Range<T>) -> Self {
         Interval(RawInterval::right_open(r.start, r.end).normalized())
@@ -1730,7 +1736,9 @@ impl<T> From<Range<T>> for Interval<T>
 // }
 
 impl<T> From<RangeFrom<T>> for Interval<T>
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(r: RangeFrom<T>) -> Self {
         Interval(RawInterval::From(r.start).normalized())
@@ -1738,7 +1746,9 @@ impl<T> From<RangeFrom<T>> for Interval<T>
 }
 
 impl<T> From<RangeTo<T>> for Interval<T>
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(r: RangeTo<T>) -> Self {
         Interval(RawInterval::UpTo(r.end).normalized())
@@ -1746,7 +1756,9 @@ impl<T> From<RangeTo<T>> for Interval<T>
 }
 
 impl<T> From<RangeToInclusive<T>> for Interval<T>
-    where T: Ord + Clone
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
 {
     fn from(r: RangeToInclusive<T>) -> Self {
         Interval(RawInterval::To(r.end).normalized())
@@ -1765,7 +1777,11 @@ impl<T> From<RangeToInclusive<T>> for Interval<T>
 ////////////////////////////////////////////////////////////////////////////////
 // Default
 ////////////////////////////////////////////////////////////////////////////////
-impl<T> Default for Interval<T> where T: Ord + Clone {
+impl<T> Default for Interval<T>
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{
     fn default() -> Self {
         Interval::empty()
     }
@@ -1784,7 +1800,7 @@ impl<T> Interval<T> where T: Ord + Clone + Finite {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(3, 7);
     /// assert_eq!(interval.iter().collect::<Vec<_>>(), [4, 5, 6]);
@@ -1798,7 +1814,7 @@ impl<T> Interval<T> where T: Ord + Clone + Finite {
     /// ```rust
     /// # use std::error::Error;
     /// # use interval::Interval;
-    /// # fn main() -> Result<(), Box<Error>> {
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let interval: Interval<i32> = Interval::open(3, 7);
     /// assert_eq!(interval.iter().rev().collect::<Vec<_>>(), [6, 5, 4]);

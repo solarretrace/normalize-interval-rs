@@ -9,10 +9,10 @@
 
 
 // Local imports.
-use tine_tree::TineTree;
+use crate::tine_tree::TineTree;
 
 // Local enum shortcuts.
-use raw_interval::RawInterval::*;
+use crate::raw_interval::RawInterval::*;
 
 
 ////////////////////////////////////////////////////////////////////////////////

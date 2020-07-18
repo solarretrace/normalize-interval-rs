@@ -43,7 +43,7 @@
 
 // NOTE: Specialization is used to allow normalization to be specialized for
 // Finite types. and remain a no-op for others.
-#![feature(specialization)]
+// #![feature(specialization)]
 
 // // Internal modules.
 pub(in crate) mod raw_interval;
@@ -63,6 +63,6 @@ pub mod normalize;
 pub mod selection;
 
 // Exports.
-pub use bound::Bound;
-pub use interval::Interval;
-pub use selection::Selection;
+pub use crate::bound::Bound;
+pub use crate::interval::Interval;
+pub use crate::selection::Selection;

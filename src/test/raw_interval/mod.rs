@@ -20,11 +20,11 @@ mod minus;
 mod union;
 
 // Local imports.
-use raw_interval::RawInterval;
-use bound::Bound;
+use crate::raw_interval::RawInterval;
+use crate::bound::Bound;
 
 // Local enum shortcuts.
-use raw_interval::RawInterval::*;
+use crate::raw_interval::RawInterval::*;
 
 ////////////////////////////////////////////////////////////////////////////
 // Constructor tests
