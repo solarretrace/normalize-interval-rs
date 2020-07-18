@@ -8,7 +8,7 @@ Usage
 
 Add this line to your crate's Cargo.toml file:
 
-interval = "0.13.0"
+interval = "0.14.0"
 
 
 Representations for infinite intervals
