@@ -20,7 +20,7 @@ use crate::raw_interval::RawInterval;
 // Standard library imports.
 use std::ops::Range;
 use std::ops::RangeFrom;
-// use std::ops::RangeInclusive; // TODO: Add when RangeInclusive accessors stabilize.
+use std::ops::RangeInclusive; // TODO: Add when RangeInclusive accessors stabilize.
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 // use std::ops::RangeFull; // NOTE: Excluded due to impl conflict.
@@ -1726,12 +1726,16 @@ impl<T> From<Range<T>> for Interval<T>
     }
 }
 
-// TODO: Fix RangeInclusive once the accessors become available.
+// // TODO: Fix RangeInclusive once the accessors become available.
 // impl<T> From<RangeInclusive<T>> for Interval<T>
-//     where T: Ord + Clone
+//     where
+//         T: Ord + Clone,
+//         RawInterval<T>: Normalize,
 // {
 //     fn from(r: RangeInclusive<T>) -> Self {
-//         Interval(RawInterval::closed(r.next().unwrap(), r.next_back().unwrap()).normalized())
+//         Interval(RawInterval::closed(
+//             r.next().unwrap(),
+//             r.next_back().unwrap()).normalized())
 //     }
 // }
 
