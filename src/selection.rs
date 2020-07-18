@@ -15,13 +15,13 @@
 use crate::bound::Bound;
 use crate::interval::Interval;
 use crate::normalize::Normalize;
+use crate::normalize::Finite;
 use crate::raw_interval::RawInterval;
-use crate::tine_tree::RawIntervalIter;
 use crate::tine_tree::TineTree;
-use crate::tine_tree;
 
 // Standard library imports.
 use std::iter::FromIterator;
+use std::iter::FusedIterator;
 
 
 
@@ -40,7 +40,6 @@ impl<T> Selection<T>
         T: Ord + Clone,
         RawInterval<T>: Normalize 
 {
-    ////////////////////////////////////////////////////////////////////////////
     // Constructors
     ////////////////////////////////////////////////////////////////////////////
     
@@ -90,7 +89,6 @@ impl<T> Selection<T>
         Interval::full().into()
     }
 
-    ////////////////////////////////////////////////////////////////////////////
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
 
@@ -135,7 +133,7 @@ impl<T> Selection<T>
     /// ```
     #[inline]
     pub fn lower_bound(&self) -> Option<Bound<T>> {
-        self.iter().next().and_then(|i| i.lower_bound())
+        self.interval_iter().next().and_then(|i| i.lower_bound())
     }
     
     /// Returns the upper [`Bound`] of the `Selection`, or `None` if the 
@@ -180,7 +178,7 @@ impl<T> Selection<T>
     /// ```
     #[inline]
     pub fn upper_bound(&self) -> Option<Bound<T>> {
-        self.iter().next_back().and_then(|i| i.upper_bound())
+        self.interval_iter().next_back().and_then(|i| i.upper_bound())
     }
     
     /// Returns the greatest lower bound of the `Selection`, or `None` if the
@@ -448,7 +446,6 @@ impl<T> Selection<T>
         self.0.contains(point)
     }
 
-    ////////////////////////////////////////////////////////////////////////////
     // Set comparisons
     ////////////////////////////////////////////////////////////////////////////
     
@@ -478,7 +475,6 @@ impl<T> Selection<T>
         !self.0.intersect(&other.0).is_empty()
     }
 
-    ////////////////////////////////////////////////////////////////////////////
     // Symmetric set operations
     ////////////////////////////////////////////////////////////////////////////
 
@@ -682,7 +678,6 @@ impl<T> Selection<T>
         Interval(self.0.closure().normalized())
     }
 
-    ////////////////////////////////////////////////////////////////////////////
     // In-place operations
     ////////////////////////////////////////////////////////////////////////////
 
@@ -821,14 +816,37 @@ impl<T> Selection<T>
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns an iterator over each of the `Interval`s in the `Selection`.
-    pub fn iter(&self) -> IntervalIter<'_, T> {
-        IntervalIter(self.0.iter_intervals())
+    pub fn interval_iter(&self) -> IntervalIter<'_, T> {
+        IntervalIter(self.0.interval_iter())
+    }
+
+    /// Returns an iterator over each of the `Interval`s in the `Selection`.
+    pub fn into_interval_iter(self) -> IntoIntervalIter<T> {
+        IntoIntervalIter(self.0.into_iter())
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Default
-////////////////////////////////////////////////////////////////////////////////
+impl<T> Selection<T> 
+    where 
+        T: Ord + Clone + Finite, 
+{
+    /// Returns an iterator over each of the points in the `Selection`.
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            intervals: self.0.interval_iter(),
+            current: Interval::empty().iter(),
+        }
+    }
+
+    /// Returns an iterator over each of the points in the `Selection`.
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter {
+            intervals: self.0.into_iter(),
+            current: Interval::empty().iter(),
+        }
+    }
+}
+
 impl<T> Default for Selection<T> 
     where
         T: Ord + Clone,
@@ -839,10 +857,6 @@ impl<T> Default for Selection<T>
     }
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Special iterator traits
-////////////////////////////////////////////////////////////////////////////////
 impl<T> Extend<Interval<T>> for Selection<T>
     where
         T: Ord + Clone,
@@ -856,10 +870,6 @@ impl<T> Extend<Interval<T>> for Selection<T>
     }
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Conversion traits
-////////////////////////////////////////////////////////////////////////////////
 impl<T> From<Interval<T>> for Selection<T>
     where
         T: Ord + Clone,
@@ -902,27 +912,24 @@ impl<T> FromIterator<T> for Selection<T>
 }
 
 impl<T> IntoIterator for Selection<T>
-    where
-        T: Ord + Clone,
-        RawInterval<T>: Normalize,
+    where T: Ord + Clone + Finite,
 {
-    type Item = Interval<T>;
+    type Item = T;
     type IntoIter = IntoIter<T>;
     
     fn into_iter(self) -> Self::IntoIter {
-        IntoIter(self.0.into_iter())
+        self.into_iter()
     }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
-// IntoIter
+// IntoIntervalIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An owning `Iterator` over the `Interval`s of a `Selection`.
 #[derive(Debug)]
-pub struct IntoIter<T>(tine_tree::IntoIter<T>);
+pub struct IntoIntervalIter<T>(crate::tine_tree::IntoIter<T>);
 
-impl<T> Iterator for IntoIter<T>
+impl<T> Iterator for IntoIntervalIter<T>
     where
         T: Ord + Clone,
         RawInterval<T>: Normalize,
@@ -937,7 +944,7 @@ impl<T> Iterator for IntoIter<T>
     }
 }
 
-impl<T> DoubleEndedIterator for IntoIter<T>
+impl<T> DoubleEndedIterator for IntoIntervalIter<T>
     where
         T: Ord + Clone,
         RawInterval<T>: Normalize,
@@ -951,12 +958,18 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 }
 
 
+impl<T> FusedIterator for IntoIntervalIter<T> 
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{}
+
 ////////////////////////////////////////////////////////////////////////////////
 // IntervalIter
 ////////////////////////////////////////////////////////////////////////////////
 /// An `Iterator` over the `Interval`s of a `Selection`.
 #[derive(Debug)]
-pub struct IntervalIter<'t, T>(RawIntervalIter<'t, T>)
+pub struct IntervalIter<'t, T>(crate::tine_tree::Iter<'t, T>)
     where T: Ord + Clone;
 
 impl<'t, T> Iterator for IntervalIter<'t, T> 
@@ -988,3 +1001,131 @@ impl<'t, T> DoubleEndedIterator for IntervalIter<'t, T>
     }
 }
 
+impl<'t, T> FusedIterator for IntervalIter<'t, T> 
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// IntoIter
+////////////////////////////////////////////////////////////////////////////////
+/// An owning `Iterator` over the points of a `Selection`.
+#[derive(Debug)]
+pub struct IntoIter<T> 
+    where
+        T: Ord + Clone
+{
+    intervals: crate::tine_tree::IntoIter<T>,
+    current: crate::interval::Iter<T>,
+}
+
+impl<T> Iterator for IntoIter<T>
+    where T: Ord + Clone + Finite,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next) = self.current.next() {
+            return Some(next);
+        }
+
+        self.current = match self.intervals
+            .next()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+        {
+            Some(interval) => interval.iter(),
+            None           => return None,
+        };
+
+        self.current.next()
+    }
+}
+
+impl<T> DoubleEndedIterator for IntoIter<T>
+    where T: Ord + Clone + Finite,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(next_back) = self.current.next_back() {
+            return Some(next_back);
+        }
+
+        self.current = match self.intervals
+            .next_back()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+        {
+            Some(interval) => interval.iter(),
+            None           => return None,
+        };
+
+        self.current.next_back()
+    }
+}
+
+impl<T> FusedIterator for IntoIter<T> 
+    where T: Ord + Clone + Finite,
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+// Iter
+////////////////////////////////////////////////////////////////////////////////
+/// An `Iterator` over the points of a `Selection`.
+#[derive(Debug)]
+pub struct Iter<'t, T> 
+    where
+        T: Ord + Clone + Finite
+{
+    intervals: crate::tine_tree::Iter<'t, T>,
+    current: crate::interval::Iter<T>,
+}
+
+impl<'t, T> Iterator for Iter<'t, T>
+    where T: Ord + Clone + Finite,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next) = self.current.next() {
+            return Some(next);
+        }
+
+        self.current = match self.intervals
+            .next()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+        {
+            Some(interval) => interval.iter(),
+            None           => return None,
+        };
+
+        self.current.next()
+    }
+}
+
+impl<'t, T> DoubleEndedIterator for Iter<'t, T>
+    where T: Ord + Clone + Finite,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(next_back) = self.current.next_back() {
+            return Some(next_back);
+        }
+
+        self.current = match self.intervals
+            .next_back()
+            .map(Normalize::normalized)
+            .map(Interval::from)
+        {
+            Some(interval) => interval.iter(),
+            None           => return None,
+        };
+
+        self.current.next_back()
+    }
+}
+
+impl<'t, T> FusedIterator for Iter<'t, T>
+    where T: Ord + Clone + Finite,
+{}

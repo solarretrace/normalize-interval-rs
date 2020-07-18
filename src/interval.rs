@@ -18,12 +18,13 @@ use crate::normalize::Normalize;
 use crate::raw_interval::RawInterval;
 
 // Standard library imports.
+use std::iter::FusedIterator;
 use std::ops::Range;
 use std::ops::RangeFrom;
+use std::ops::RangeFull;
 // use std::ops::RangeInclusive; // TODO: Add when RangeInclusive accessors stabilize.
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
-// use std::ops::RangeFull; // NOTE: Excluded due to impl conflict.
 use std::ops::Sub;
 
 
@@ -1769,14 +1770,15 @@ impl<T> From<RangeToInclusive<T>> for Interval<T>
     }
 }
 
-// NOTE: Conflicts with From<T> convertion.
-// impl<T> From<RangeFull> for Interval<T>
-//     where T: Ord + Clone
-// {
-//     fn from(r: RangeFull) -> Self {
-//         Interval(RawInterval::full().normalized())
-//     }
-// }
+impl<T> From<RangeFull> for Interval<T>
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{
+    fn from(_r: RangeFull) -> Self {
+        Interval(RawInterval::Full.normalized())
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Default
@@ -1833,6 +1835,22 @@ impl<T> Interval<T> where T: Ord + Clone + Finite {
     }
 }
 
+
+
+impl<T> IntoIterator for Interval<T>
+    where T: Ord + Clone + Finite,
+{
+    type Item = T;
+    type IntoIter = Iter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter { inner: self }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Iter
+////////////////////////////////////////////////////////////////////////////////
 /// An `Iterator` over the points in an `Interval`.
 #[derive(Debug)]
 pub struct Iter<T> where T: Ord + Clone {
@@ -1877,3 +1895,8 @@ impl<T> DoubleEndedIterator for Iter<T>
         }
     }
 }
+
+impl<T> FusedIterator for Iter<T> 
+    where
+        T: Ord + Clone + Finite
+{}

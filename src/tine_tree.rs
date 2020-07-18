@@ -96,7 +96,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     /// Returns `true` if the `TineTree` contains the given point.
     pub(in crate) fn contains(&self, point: &T) -> bool {
         // TODO(Sky): Could be optimized by splitting the tree and looking around.
-        for interval in self.iter_intervals() {
+        for interval in self.interval_iter() {
             if interval.contains(point) {return true;}
         }
         false
@@ -165,8 +165,8 @@ impl<T> TineTree<T> where T: Ord + Clone {
     /// `TineTree`s.
     pub(in crate) fn intersect(&self, other: &Self) -> Self {
         let mut intersection = Self::new();
-        let mut self_intervals = self.iter_intervals();
-        let mut other_intervals = other.iter_intervals();
+        let mut self_intervals = self.interval_iter();
+        let mut other_intervals = other.interval_iter();
 
         while let Some(self_interval) = self_intervals.next() {
             'segment: loop {
@@ -192,7 +192,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     /// `TineTree`s.
     pub(in crate) fn union(&self, other: &Self) -> Self {
         let mut union = self.clone();
-        for interval in other.iter_intervals() {
+        for interval in other.interval_iter() {
             union.union_in_place(&interval);
         }
         union
@@ -202,7 +202,7 @@ impl<T> TineTree<T> where T: Ord + Clone {
     /// `TineTree`'s intervals.    
     pub(in crate) fn minus(&self, other: &Self) -> Self {
         let mut minus = self.clone();
-        for interval in other.iter_intervals() {
+        for interval in other.interval_iter() {
             minus.minus_in_place(&interval);
         }
         minus
@@ -919,8 +919,8 @@ impl<T> TineTree<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns an iterator over each of the `RawInterval`s in the tree.
-    pub(in crate) fn iter_intervals(&self) -> RawIntervalIter<'_, T> {
-        RawIntervalIter {
+    pub(in crate) fn interval_iter(&self) -> Iter<'_, T> {
+        Iter {
             tine_iter: self.0.iter(),
             saved_lower: None,
             saved_upper: None,
@@ -1071,17 +1071,17 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RawIntervalIter
+// Iter
 ////////////////////////////////////////////////////////////////////////////////
 /// An `Iterator` that constructs `RawInterval`s from a sequence of `Tine`s.
 #[derive(Debug)]
-pub(in crate) struct RawIntervalIter<'t, T> {
+pub(in crate) struct Iter<'t, T> {
     tine_iter: collections::btree_set::Iter<'t, Tine<T>>,
     saved_lower: Option<Tine<T>>,
     saved_upper: Option<Tine<T>>,
 }
 
-impl<'t, T> Iterator for RawIntervalIter<'t, T>
+impl<'t, T> Iterator for Iter<'t, T>
     where T: Ord + Clone
 {
     type Item = RawInterval<T>;
@@ -1120,7 +1120,7 @@ impl<'t, T> Iterator for RawIntervalIter<'t, T>
     }
 }
 
-impl<'t, T> DoubleEndedIterator for RawIntervalIter<'t, T>
+impl<'t, T> DoubleEndedIterator for Iter<'t, T>
     where T: Ord + Clone 
 {
     fn next_back(&mut self) -> Option<Self::Item> {
