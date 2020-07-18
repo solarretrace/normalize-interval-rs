@@ -886,6 +886,21 @@ impl<T> FromIterator<Interval<T>> for Selection<T>
     }
 }
 
+impl<T> FromIterator<T> for Selection<T>
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{
+    fn from_iter<I>(iter: I) -> Self where I: IntoIterator<Item=T> {
+        let mut selection = Selection::new();
+        for item in iter.into_iter() {
+            let raw = Interval::point(item).0.denormalized();
+            selection.0.union_in_place(&raw);
+        }
+        selection
+    }
+}
+
 impl<T> IntoIterator for Selection<T>
     where
         T: Ord + Clone,
