@@ -4,13 +4,11 @@ version = "0.13.0"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-# maintenance = { status = "experiemental" }
+maintenance = { status = "passively-maintained" }
 repository = "https://github.com/skysch/normalize_interval-rs"
 description = "Normalizing interval library"
 readme = "readme.md"
 keywords = ["range", "interval", "selection", "set"]
-categories = []
-documentation = ""
 homepage = "https://github.com/skysch/normalize_interval-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
 
