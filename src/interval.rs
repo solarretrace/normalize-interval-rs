@@ -11,7 +11,7 @@
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
-// Local imports.
+// Internal library imports.
 use crate::bound::Bound;
 use crate::normalize::Finite;
 use crate::normalize::Normalize;

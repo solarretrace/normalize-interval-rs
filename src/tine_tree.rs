@@ -12,7 +12,7 @@
 // BTreeSet::insert frequently without concern for its return value.
 #![allow(unused_results)]
 
-// Local imports.
+// Internal library imports.
 use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
 use crate::tine::Tine;

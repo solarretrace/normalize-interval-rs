@@ -13,7 +13,7 @@
 //! 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Local imports.
+// Internal library imports.
 use crate::raw_interval::RawInterval;
 
 // Local enum shortcuts.

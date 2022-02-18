@@ -19,7 +19,7 @@ mod intersect;
 mod minus;
 mod union;
 
-// Local imports.
+// Internal library imports.
 use crate::raw_interval::RawInterval;
 use crate::bound::Bound;
 

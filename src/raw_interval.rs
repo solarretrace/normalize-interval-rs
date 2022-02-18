@@ -9,7 +9,7 @@
 //! Non-normalizing interval type.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Local imports.
+// Internal library imports.
 use crate::bound::Bound;
 use crate::utility::Few;
 

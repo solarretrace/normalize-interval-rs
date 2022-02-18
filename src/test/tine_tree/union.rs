@@ -7,7 +7,7 @@
 // except according to those terms.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Local imports.
+// Internal library imports.
 use crate::tine_tree::TineTree;
 
 // Local enum shortcuts.
