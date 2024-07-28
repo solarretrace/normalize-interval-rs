@@ -21,7 +21,6 @@ use crate::utility::Few;
 // Standard library imports.
 use std::collections::BTreeSet;
 use std::collections::btree_set;
-use std::collections;
 use std::iter::FromIterator;
 
 
@@ -1076,7 +1075,7 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 /// An `Iterator` that constructs `RawInterval`s from a sequence of `Tine`s.
 #[derive(Debug)]
 pub(in crate) struct Iter<'t, T> {
-    tine_iter: collections::btree_set::Iter<'t, Tine<T>>,
+    tine_iter: btree_set::Iter<'t, Tine<T>>,
     saved_lower: Option<Tine<T>>,
     saved_upper: Option<Tine<T>>,
 }
@@ -1153,28 +1152,5 @@ impl<'t, T> DoubleEndedIterator for Iter<'t, T>
                     RawInterval::new(lower, upper)
                 }
             })
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TreeSplit
-////////////////////////////////////////////////////////////////////////////////
-/// A `TineTree`s elements split out for simplified manipulation.
-#[derive(Debug)]
-struct TreeSplit<T> {
-    pub(in crate) before: Option<Tine<T>>,
-    pub(in crate) lower: Option<Tine<T>>,
-    pub(in crate) upper: Option<Tine<T>>,
-    pub(in crate) after: Option<Tine<T>>,
-}
-
-impl<T> Default for TreeSplit<T> {
-    fn default() -> Self {
-        TreeSplit {
-            before: None,
-            lower: None,
-            upper: None,
-            after: None,
-        }
     }
 }
