@@ -4,10 +4,10 @@ version = "0.14.4"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-maintenance = { status = "passively-maintained" }
 repository = "https://github.com/solarretrace/normalize_interval-rs"
 description = "Normalizing interval library"
 readme = "readme.md"
+categories = ["data-structures"]
 keywords = ["range", "interval", "selection", "set"]
 homepage = "https://github.com/solarretrace/normalize_interval-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
@@ -22,32 +22,4 @@ default = []
 # Required dependencies
 [dependencies]
 few = { version = "0.1" }
-
-# The development profile, used for `cargo build`
-[profile.dev]
-opt-level = 0
-debug = false # Disabled to speed up compilation; not being used much.
-rpath = false
-lto = false
-debug-assertions = true
-incremental = true
-overflow-checks = true
-
-# Development profile overrides, ensure dependent crates run fast.
-[profile.dev.package."*"]
-opt-level = 3
-debug-assertions = false
-codegen-units = 1
-
-
-# The release profile, used for `cargo build --release`
-[profile.release]
-opt-level = 3
-debug = true
-rpath = false
-lto = "fat"
-debug-assertions = false
-codegen-units = 1
-incremental = false
-overflow-checks = true
 

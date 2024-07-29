@@ -11,7 +11,9 @@
 
 // Internal library imports.
 use crate::bound::Bound;
-use crate::utility::Few;
+
+// External library imports.
+use few::Few;
 
 // Standard library imports.
 use std::cmp::Ordering;
@@ -69,11 +71,11 @@ impl<T> RawInterval<T> where T: Ord + Clone {
         use Bound::*;
         use RawInterval::*;
         match (lower, upper) {
-            (Include(l), Include(u)) => RawInterval::closed(l, u),
-            (Include(l), Exclude(u)) => RawInterval::right_open(l, u),
+            (Include(l), Include(u)) => Self::closed(l, u),
+            (Include(l), Exclude(u)) => Self::right_open(l, u),
             (Include(l), Infinite)   => From(l),
-            (Exclude(l), Include(u)) => RawInterval::left_open(l, u),
-            (Exclude(l), Exclude(u)) => RawInterval::open(l, u),
+            (Exclude(l), Include(u)) => Self::left_open(l, u),
+            (Exclude(l), Exclude(u)) => Self::open(l, u),
             (Exclude(l), Infinite)   => UpFrom(l),
             (Infinite,   Include(u)) => To(u),
             (Infinite,   Exclude(u)) => UpTo(u),
@@ -211,22 +213,14 @@ impl<T> RawInterval<T> where T: Ord + Clone {
     ///
     /// [`Empty`]: #variant.Empty
     pub fn is_empty(&self) -> bool {
-        use RawInterval::*;
-        match *self {
-            Empty => true,
-            _     => false,
-        }
+        matches!(self, Self::Empty)
     }
 
     /// Returns `true` if the interval is [`Full`].
     ///
     /// [`Full`]: #variant.Full
     pub fn is_full(&self) -> bool {
-        use RawInterval::*;
-        match *self {
-            Full => true,
-            _     => false,
-        }
+        matches!(self, Self::Full)
     }
 
     /// Returns `true` if the interval contains the given point.
@@ -293,29 +287,30 @@ impl<T> RawInterval<T> where T: Ord + Clone {
 
     /// Returns the largest interval whose points are all contained entirely
     /// within this interval and the given interval.
+    #[must_use]
     pub fn intersect(&self, other: &Self) -> Self {
         let lb = match (self.lower_bound(), other.lower_bound()) {
             (Some(a), Some(b)) => a.greatest_intersect(&b),
-            _                  => return RawInterval::Empty, // Either Empty.
+            _                  => return Self::Empty, // Either Empty.
         };
 
         let ub = match (self.upper_bound(), other.upper_bound()) {
             (Some(a), Some(b)) => a.least_intersect(&b),
-            _                  => return RawInterval::Empty, // Either Empty.
+            _                  => return Self::Empty, // Either Empty.
         };
 
         if lb.as_ref() == ub.as_ref() && 
             ((lb.is_inclusive() && ub.is_exclusive()) ||
              (lb.is_exclusive() && ub.is_inclusive()))
         {
-            RawInterval::Empty
+            Self::Empty
         } else {
-            RawInterval::new(lb, ub)
+            Self::new(lb, ub)
         }
     }
     
     /// Returns a `Vec` of `RawInterval`s containing all of the points 
-    /// contained within this interval and the given interval., vec![a, b]);
+    /// contained within this interval and the given interval., `vec![a, b]`);
     pub fn union(&self, other: &Self) -> impl Iterator<Item=Self> {
         match (self.is_empty(), other.is_empty()) {
             (true,  true)  => Few::Zero,
@@ -344,35 +339,37 @@ impl<T> RawInterval<T> where T: Ord + Clone {
     
     /// Returns the smallest interval that contains all of the points contained
     /// within this interval and the given interval.
+    #[must_use]
     pub fn enclose(&self, other: &Self) -> Self {
         let lb = match (self.lower_bound(), other.lower_bound()) {
             (Some(a), Some(b)) => a.least_union(&b),
             (Some(a), None)    => a,
             (None,    Some(b)) => b,
-            (None,    None)    => return RawInterval::Empty, // Both Empty.
+            (None,    None)    => return Self::Empty, // Both Empty.
         };
 
         let ub = match (self.upper_bound(), other.upper_bound()) {
             (Some(a), Some(b)) => a.greatest_union(&b),
             (Some(a), None)    => a,
             (None,    Some(b)) => b,
-            (None,    None)    => return RawInterval::Empty, // Both Empty.
+            (None,    None)    => return Self::Empty, // Both Empty.
         };
 
-        RawInterval::new(lb, ub)
+        Self::new(lb, ub)
     }
 
     /// Returns the smallest closed interval that contains all of the points
     /// contained within the interval.
+    #[must_use]
     pub fn closure(&self) -> Self {
         use RawInterval::*;
         match self {
-            &Open(ref l, ref r)      => Closed(l.clone(), r.clone()),
-            &LeftOpen(ref l, ref r)  => Closed(l.clone(), r.clone()),
-            &RightOpen(ref l, ref r) => Closed(l.clone(), r.clone()),
-            &UpTo(ref r)             => To(r.clone()),
-            &UpFrom(ref l)           => From(l.clone()),
-            _                        => self.clone(),
+            Open(l, r)      => Closed(l.clone(), r.clone()),
+            LeftOpen(l, r)  => Closed(l.clone(), r.clone()),
+            RightOpen(l, r) => Closed(l.clone(), r.clone()),
+            UpTo(r)         => To(r.clone()),
+            UpFrom(l)       => From(l.clone()),
+            _               => self.clone(),
         }
     }
 
@@ -380,20 +377,23 @@ impl<T> RawInterval<T> where T: Ord + Clone {
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns the interval enclosing all of the given intervals.
+    #[must_use]
     pub fn enclose_all<I>(intervals: I) -> Self
         where I: Iterator<Item=Self>
     {
-        intervals.fold(RawInterval::Full, |acc, i| acc.enclose(&i))
+        intervals.fold(Self::Full, |acc, i| acc.enclose(&i))
     }
 
     /// Returns the intersection of all of the given intervals.
+    #[must_use]
     pub fn intersect_all<I>(intervals: I) -> Self
         where I: Iterator<Item=Self>
     {
-        intervals.fold(RawInterval::Full, |acc, i| acc.intersect(&i))
+        intervals.fold(Self::Full, |acc, i| acc.intersect(&i))
     }
 
     /// Returns the union of all of the given intervals.
+    #[allow(clippy::option_if_let_else)] // False positive.
     pub fn union_all<I>(intervals: I) -> impl Iterator<Item=Self>
         where I: Iterator<Item=Self>
     {
@@ -405,11 +405,11 @@ impl<T> RawInterval<T> where T: Ord + Clone {
             // Fold over remaining intervals.
             it.fold(vec![start], |mut prev, next| {
                 // Early exit for full interval.
-                if next == RawInterval::Full {
-                    return vec![RawInterval::Full];
+                if next == Self::Full {
+                    return vec![Self::Full];
                 }
                 let mut append = true;
-                for item in prev.iter_mut() {
+                for item in &mut prev {
                     if item.intersects(&next) || item.adjacent(&next) {
                         *item = item.enclose(&next);
                         append = false;

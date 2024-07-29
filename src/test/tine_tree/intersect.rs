@@ -34,7 +34,7 @@ fn disjoint_aggregation() {
 	t.intersect_in_place(&UpFrom(50));
 	t.intersect_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), []);
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), []);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn nested_aggregation() {
     t.intersect_in_place(&UpFrom(20));
     t.intersect_in_place(&Point(25));
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [Point(25)]);
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [Point(25)]);
 }
 
 

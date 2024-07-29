@@ -52,12 +52,14 @@ pub trait Normalize {
     fn denormalize(&mut self);
 
     /// Returns a normalized copy of the given interval.
+    #[must_use]
     fn normalized(mut self) -> Self where Self: Sized {
         self.normalize();
         self
     }
 
     /// Returns a denormalized copy of the given interval.
+    #[must_use]
     fn denormalized(mut self) -> Self where Self: Sized {
         self.denormalize();
         self
@@ -140,15 +142,15 @@ macro_rules! std_integer_finite_impl {
     // For each given type...
     ($($t:ident),*) => {
         $(impl Finite for $t {
-            const MINIMUM: $t = {std::$t::MIN};
-            const MAXIMUM: $t = {std::$t::MAX};
+            const MINIMUM: $t = {$t::MIN};
+            const MAXIMUM: $t = {$t::MAX};
 
             fn pred(&self) -> Option<Self> {
-                if *self != std::$t::MIN {Some(self - 1)} else {None}
+                (*self != $t::MIN).then(|| self - 1)
             }
 
             fn succ(&self) -> Option<Self> {
-                if *self != std::$t::MAX {Some(self + 1)} else {None}
+                (*self != $t::MAX).then(|| self + 1)
             }
         })*
     };

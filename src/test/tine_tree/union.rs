@@ -33,7 +33,7 @@ fn disjoint_aggregation() {
 	t.union_in_place(&UpFrom(10));
 	t.union_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	UpTo(0),
 		Point(1),
 		Open(2, 3),
@@ -59,7 +59,7 @@ fn left_aggregation() {
 	t.union_in_place(&UpFrom(8));
 	t.union_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	Full]);
 }
 
@@ -78,7 +78,7 @@ fn right_aggregation() {
     t.union_in_place(&UpTo(1));
     t.union_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	Full]);
 }
 
@@ -96,7 +96,7 @@ fn center_aggregation() {
 	t.union_in_place(&Closed(1, 9));
 	t.union_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	UpTo(10)]);
 }
 
@@ -115,7 +115,7 @@ fn adjacent_aggregation() {
 	t.union_in_place(&UpFrom(9));
 	t.union_in_place(&Empty);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	UpTo(3),
     	UpFrom(3)]);
 }
@@ -136,7 +136,7 @@ fn full_aggregation() {
 	t.union_in_place(&UpFrom(9));
 	t.union_in_place(&Full);
 
-    assert_eq!(t.iter_intervals().collect::<Vec<_>>(), [
+    assert_eq!(t.into_iter().collect::<Vec<_>>(), [
     	Full]);
 }
 

@@ -32,6 +32,16 @@ use std::iter::FusedIterator;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Selection<T>(TineTree<T>);
 
+impl<T> Default for Selection<T> 
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // All intervals in the `TineTree` must be denormalized before insert and
 // normalized before return. This ensures proper merging of adjacent normalized
 // intervals.
@@ -49,7 +59,7 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::new();
@@ -58,14 +68,16 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
-        Selection(TineTree::new())
+        Self(TineTree::new())
     }
 
     /// Constructs a new empty `Selection`.
     #[inline]
+    #[must_use]
     pub fn empty() -> Self {
-        Selection::new()
+        Self::new()
     }
 
     /// Constructs a new full `Selection`.
@@ -74,7 +86,7 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::full();
@@ -85,6 +97,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn full() -> Self {
         Interval::full().into()
     }
@@ -101,9 +114,9 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound::*;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -119,9 +132,9 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound::*;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -132,6 +145,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn lower_bound(&self) -> Option<Bound<T>> {
         self.interval_iter().next().and_then(|i| i.lower_bound())
     }
@@ -146,9 +160,9 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound::*;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -164,9 +178,9 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound::*;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -177,6 +191,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn upper_bound(&self) -> Option<Bound<T>> {
         self.interval_iter().next_back().and_then(|i| i.upper_bound())
     }
@@ -190,8 +205,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -207,8 +222,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -219,6 +234,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn infimum(&self) -> Option<T> {
         self.0.lower_bound().and_then(|b| b.as_ref().cloned())
     }
@@ -233,8 +249,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -250,8 +266,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -262,6 +278,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn supremum(&self) -> Option<T> {
         self.0.upper_bound().and_then(|b| b.as_ref().cloned())
     }
@@ -276,8 +293,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -290,6 +307,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -300,8 +318,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -314,6 +332,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_full(&self) -> bool {
         self.0.is_full()
     }
@@ -324,8 +343,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Interval<i32> = Interval::open(-2, 4);
@@ -338,6 +357,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_bounded(&self) -> bool {
         self.lower_bound().is_some() || self.upper_bound().is_some()
     }
@@ -348,8 +368,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Interval::open(-2, 4).into();
@@ -362,11 +382,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_left_bounded(&self) -> bool {
-        match self.lower_bound() {
-            Some(Bound::Infinite) => false,
-            _                     => true,
-        }
+        !matches!(self.lower_bound(), Some(Bound::Infinite))
     }
 
     
@@ -376,8 +394,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Interval::open(-2, 4).into();
@@ -390,11 +408,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_right_bounded(&self) -> bool {
-        match self.upper_bound() {
-            Some(Bound::Infinite) => false,
-            _                     => true,
-        }
+        !matches!(self.upper_bound(), Some(Bound::Infinite))
     }
 
     /// Returns `true` if the the `Selection` is helf-bounded.
@@ -403,8 +419,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Interval::unbounded_to(-2).into();
@@ -417,6 +433,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_half_bounded(&self) -> bool {
         let l = self.is_left_bounded();
         let r = self.is_right_bounded();
@@ -429,8 +446,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(0, 20));
@@ -442,6 +459,7 @@ impl<T> Selection<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn contains(&self, point: &T) -> bool {
         self.0.contains(point)
     }
@@ -455,8 +473,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 5));
@@ -470,6 +488,7 @@ impl<T> Selection<T>
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn intersects(&self, other: &Self) -> bool {
         // TODO: Make generic?
         !self.0.intersect(&other.0).is_empty()
@@ -485,14 +504,17 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
-    // /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
-    // /// 
-    // /// assert_eq!(sel.complement().collect::<Vec<_>>(), 
-    // ///     vec![Interval::unbounded_to(-3), Interval::unbounded_from(5)]);
+    /// let sel: Selection<i32> = Selection::from(Interval::open(-3, 5));
+    /// 
+    /// assert_eq!(sel.complement().interval_iter().collect::<Vec<_>>(), 
+    ///     vec![
+    ///         Interval::unbounded_to(-3i32),
+    ///         Interval::unbounded_from(5i32)
+    ///     ]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
@@ -505,22 +527,23 @@ impl<T> Selection<T>
     /// ```rust
     /// # use std::error::Error;
     /// # use std::i32;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let sel: Selection<i32> = Selection::from(Interval::closed(-3, 5));
     /// 
-    /// assert_eq!(sel.complement().iter().collect::<Vec<_>>(), vec![
-    ///     Interval::closed(i32::MIN, -4),
-    ///     Interval::closed(6, i32::MAX),
+    /// assert_eq!(sel.complement().interval_iter().collect::<Vec<_>>(), vec![
+    ///     Interval::closed(i32::MIN, -4i32),
+    ///     Interval::closed(6i32, i32::MAX),
     /// ]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn complement(&self) -> Self {
-        Selection(self.0.complement())
+        Self(self.0.complement())
     }
 
     /// Returns the `Selection` containing all points in both the given
@@ -530,13 +553,13 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
-    /// assert_eq!(a.intersect(&b).iter().collect::<Vec<_>>(),
+    /// assert_eq!(a.intersect(&b).interval_iter().collect::<Vec<_>>(),
     ///     vec![Interval::closed(4, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -549,20 +572,21 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
     /// let b: Selection<i32> = Selection::from(Interval::open(4, 13));
-    /// assert_eq!(a.intersect(&b).iter().collect::<Vec<_>>(),
+    /// assert_eq!(a.intersect(&b).interval_iter().collect::<Vec<_>>(),
     ///     vec![Interval::closed(5, 6)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn intersect(&self, other: &Self) -> Self {
-        Selection(self.0.intersect(&other.0))
+        Self(self.0.intersect(&other.0))
     }
 
     /// Returns the `Selection` containing all points in either of the given
@@ -572,13 +596,13 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
-    /// assert_eq!(a.union(&b).iter().collect::<Vec<_>>(),
+    /// assert_eq!(a.union(&b).interval_iter().collect::<Vec<_>>(),
     ///     vec![Interval::closed(-3, 13)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -591,20 +615,21 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 7));
     /// let b: Selection<i32> = Selection::from(Interval::open(4, 13));
-    /// assert_eq!(a.union(&b).iter().collect::<Vec<_>>(),
+    /// assert_eq!(a.union(&b).interval_iter().collect::<Vec<_>>(),
     ///     vec![Interval::closed(-2, 12)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn union(&self, other: &Self) -> Self {
-        Selection(self.0.union(&other.0))
+        Self(self.0.union(&other.0))
     }
 
     /// Returns the `Selection` containing all points in the `Selection` which
@@ -614,20 +639,21 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// let b: Selection<i32> = Selection::from(Interval::closed(4, 13));
-    /// assert_eq!(a.minus(&b).iter().collect::<Vec<_>>(),
+    /// assert_eq!(a.minus(&b).interval_iter().collect::<Vec<_>>(),
     ///     vec![Interval::right_open(-3, 4)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn minus(&self, other: &Self) -> Self {
-        Selection(self.0.minus(&other.0))
+        Self(self.0.minus(&other.0))
     }
 
     /// Returns the smallest `Interval` containing all of the points in the 
@@ -637,8 +663,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -650,6 +676,7 @@ impl<T> Selection<T>
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn enclose(&self) -> Interval<T> {
         Interval(self.0.enclose().normalized())
     }
@@ -661,8 +688,8 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let a: Selection<i32> = Selection::from(Interval::open(-3, 5));
@@ -674,6 +701,7 @@ impl<T> Selection<T>
     /// #     Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn closure(&self) -> Interval<T> {
         Interval(self.0.closure().normalized())
     }
@@ -688,14 +716,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// sel.intersect_in_place(Interval::open(2, 5));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::open(2, 5)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -708,14 +736,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// sel.intersect_in_place(Interval::open(2, 5));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::closed(3, 4)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -731,14 +759,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// sel.union_in_place(Interval::open(12, 15));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::closed(-3, 7), Interval::open(12, 15)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -751,14 +779,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::open(-3, 8));
     /// sel.union_in_place(Interval::open(7, 10));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::closed(-2, 9)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -774,14 +802,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// sel.minus_in_place(Interval::open(2, 5));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::closed(-3, 2), Interval::closed(5, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -794,14 +822,14 @@ impl<T> Selection<T>
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Interval;
-    /// # use interval::Selection;
+    /// # use normalize_interval::Interval;
+    /// # use normalize_interval::Selection;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut sel: Selection<i32> = Selection::from(Interval::closed(-3, 7));
     /// sel.minus_in_place(Interval::closed(2, 5));
     ///
-    /// assert_eq!(sel.iter().collect::<Vec<_>>(),
+    /// assert_eq!(sel.interval_iter().collect::<Vec<_>>(),
     ///     [Interval::closed(-3, 1), Interval::closed(6, 7)]);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
@@ -816,30 +844,38 @@ impl<T> Selection<T>
     ////////////////////////////////////////////////////////////////////////////
 
     /// Returns an iterator over each of the `Interval`s in the `Selection`.
+    #[must_use]
     pub fn interval_iter(&self) -> IntervalIter<'_, T> {
         IntervalIter(self.0.interval_iter())
     }
 
     /// Returns an iterator over each of the `Interval`s in the `Selection`.
+    #[must_use]
     pub fn into_interval_iter(self) -> IntoIntervalIter<T> {
         IntoIntervalIter(self.0.into_iter())
     }
 }
 
 impl<T> Selection<T> 
-    where 
-        T: Ord + Clone + Finite, 
+    where T: Ord + Clone + Finite, 
 {
     /// Returns an iterator over each of the points in the `Selection`.
+    #[must_use]
     pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             intervals: self.0.interval_iter(),
             current: Interval::empty().iter(),
         }
     }
+}
 
-    /// Returns an iterator over each of the points in the `Selection`.
-    pub fn into_iter(self) -> IntoIter<T> {
+impl<T> IntoIterator for Selection<T>
+    where T: Ord + Clone + Finite,
+{
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+    
+    fn into_iter(self) -> Self::IntoIter {
         IntoIter {
             intervals: self.0.into_iter(),
             current: Interval::empty().iter(),
@@ -847,13 +883,17 @@ impl<T> Selection<T>
     }
 }
 
-impl<T> Default for Selection<T> 
-    where
-        T: Ord + Clone,
-        RawInterval<T>: Normalize,
+impl<'a, T> IntoIterator for &'a Selection<T>
+    where T: Ord + Clone + Finite,
 {
-    fn default() -> Self {
-        Selection::new()
+    type Item = T;
+    type IntoIter = Iter<'a, T>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            intervals: self.0.interval_iter(),
+            current: Interval::empty().iter(),
+        }
     }
 }
 
@@ -863,7 +903,7 @@ impl<T> Extend<Interval<T>> for Selection<T>
         RawInterval<T>: Normalize,
 {
     fn extend<I>(&mut self, iter: I) where I: IntoIterator<Item=Interval<T>> {
-        for interval in iter.into_iter() {
+        for interval in iter {
             let raw = interval.0.denormalized();
             self.0.union_in_place(&raw);
         }
@@ -877,7 +917,7 @@ impl<T> From<Interval<T>> for Selection<T>
 {
     fn from(interval: Interval<T>) -> Self {
         let raw = interval.0.denormalized();
-        Selection(TineTree::from_raw_interval(raw))
+        Self(TineTree::from_raw_interval(raw))
     }
 }
 
@@ -887,8 +927,8 @@ impl<T> FromIterator<Interval<T>> for Selection<T>
         RawInterval<T>: Normalize,
 {
     fn from_iter<I>(iter: I) -> Self where I: IntoIterator<Item=Interval<T>> {
-        let mut selection = Selection::new();
-        for interval in iter.into_iter() {
+        let mut selection = Self::new();
+        for interval in iter {
             let raw = interval.0.denormalized();
             selection.0.union_in_place(&raw);
         }
@@ -902,23 +942,12 @@ impl<T> FromIterator<T> for Selection<T>
         RawInterval<T>: Normalize,
 {
     fn from_iter<I>(iter: I) -> Self where I: IntoIterator<Item=T> {
-        let mut selection = Selection::new();
-        for item in iter.into_iter() {
+        let mut selection = Self::new();
+        for item in iter {
             let raw = Interval::point(item).0.denormalized();
             selection.0.union_in_place(&raw);
         }
         selection
-    }
-}
-
-impl<T> IntoIterator for Selection<T>
-    where T: Ord + Clone + Finite,
-{
-    type Item = T;
-    type IntoIter = IntoIter<T>;
-    
-    fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
     }
 }
 
@@ -1014,10 +1043,11 @@ impl<'t, T> FusedIterator for IntervalIter<'t, T>
 /// An owning `Iterator` over the points of a `Selection`.
 #[derive(Debug)]
 pub struct IntoIter<T> 
-    where
-        T: Ord + Clone
+    where T: Ord + Clone
 {
+    /// The interval iterator of the `TineTree`.
     intervals: crate::tine_tree::IntoIter<T>,
+    /// The current interval.
     current: crate::interval::Iter<T>,
 }
 
@@ -1075,10 +1105,11 @@ impl<T> FusedIterator for IntoIter<T>
 /// An `Iterator` over the points of a `Selection`.
 #[derive(Debug)]
 pub struct Iter<'t, T> 
-    where
-        T: Ord + Clone + Finite
+    where T: Ord + Clone + Finite
 {
+    /// The interval iterator of the `TineTree`.
     intervals: crate::tine_tree::Iter<'t, T>,
+    /// The current interval.
     current: crate::interval::Iter<T>,
 }
 

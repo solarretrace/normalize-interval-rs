@@ -49,7 +49,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Include(15);
@@ -63,10 +63,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn is_finite(&self) -> bool {
-        match *self {
-            Infinite => false,
-            _        => true,
-        }
+        !matches!(self, Infinite)
     }
 
     /// Returns `true` if the bound is an [`Include`] value.
@@ -77,7 +74,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Include(15);
@@ -91,10 +88,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn is_inclusive(&self) -> bool {
-        match *self {
-            Include(_) => true,
-            _          => false,
-        }
+        matches!(self, Include(_))
     }
 
     /// Returns `true` if the bound is an [`Exclude`] value.
@@ -105,7 +99,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(15);
@@ -119,10 +113,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn is_exclusive(&self) -> bool {
-        match *self {
-            Exclude(_) => true,
-            _          => false,
-        }
+        matches!(self, Exclude(_))
     }
 
     // Adapter for working with references
@@ -137,7 +128,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(34);
@@ -149,10 +140,10 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn as_ref(&self) -> Option<&T> {
-        match *self {
-            Include(ref bound) => Some(bound),
-            Exclude(ref bound) => Some(bound),
-            Infinite           => None,
+        match self {
+            Include(bound) |
+            Exclude(bound) => Some(bound),
+            Infinite       => None,
         }
     }
 
@@ -166,7 +157,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let mut x: Bound<i32> = Bound::Exclude(34);
@@ -178,10 +169,10 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// ```
     #[inline]
     pub fn as_mut(&mut self) -> Option<&mut T> {
-        match *self {
-            Include(ref mut bound) => Some(bound),
-            Exclude(ref mut bound) => Some(bound),
-            Infinite               => None,
+        match self {
+            Include(bound) |
+            Exclude(bound) => Some(bound),
+            Infinite       => None,
         }
     }
 
@@ -209,7 +200,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Exclude(34);
@@ -219,9 +210,9 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     /// # }
     /// ```
     ///
-    /// ```rust{.should_panic}
+    /// ```rust,should_panic
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::Infinite;
@@ -233,7 +224,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     #[inline]
     pub fn unwrap(self) -> T {
         match self {
-            Include(x) => x,
+            Include(x) |
             Exclude(x) => x,
             Infinite
                 => panic!("called `Bound::unwrap()` on an `Infinite` value"),
@@ -246,7 +237,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Exclude(34).unwrap_or(15), 34);
@@ -258,7 +249,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     #[inline]
     pub fn unwrap_or(self, def: T) -> T {
         match self {
-            Include(x) => x,
+            Include(x) |
             Exclude(x) => x,
             Infinite   => def,
         }
@@ -270,7 +261,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let k = 10;
@@ -283,7 +274,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     #[inline]
     pub fn unwrap_or_else<F: FnOnce() -> T>(self, f: F) -> T {
         match self {
-            Include(x) => x,
+            Include(x) |
             Exclude(x) => x,
             Infinite   => f(),
         }
@@ -299,7 +290,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<u32> = Bound::Include(10);
@@ -328,7 +319,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Include(10).map_or(6, |k| k * 2), 20);
@@ -339,7 +330,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     #[inline]
     pub fn map_or<U, F>(self, def: U, f: F) -> U where F: FnOnce(T) -> U {
         match self {
-            Include(x) => f(x),
+            Include(x) |
             Exclude(x) => f(x),
             Infinite   => def,
         }
@@ -354,7 +345,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// assert_eq!(Bound::Include(10).map_or_else(|| 6, |k| k * 2), 20);
@@ -370,7 +361,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
             F: FnOnce(T) -> U
     {
         match self {
-            Include(x) => f(x),
+            Include(x) |
             Exclude(x) => f(x),
             Infinite   => def(),
         }
@@ -385,7 +376,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
     ///
     /// ```rust
     /// # use std::error::Error;
-    /// # use interval::Bound;
+    /// # use normalize_interval::Bound;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// # //-------------------------------------------------------------------
     /// let x: Bound<i32> = Bound::transfer(Bound::Exclude(34), 18);
@@ -409,18 +400,19 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the union of the given boundaries, or the lowest one if they are
     /// not at the same point.
-    pub(in crate) fn least_union(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn least_union(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Include(ref p), &Include(ref o))
+            (Include(p), Include(o))
                 => if p < o {Include(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
+            (Include(p), Exclude(o))
                 => if p <= o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Exclude(ref p), &Include(ref o))
+            (Exclude(p), Include(o))
                 => if p < o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Exclude(ref p), &Exclude(ref o))
+            (Exclude(p), Exclude(o))
                 => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
         
             _   => Infinite,
@@ -429,46 +421,48 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the intersect of the given boundaries, or the lowest one if they
     /// are not at the same point.
-    pub(in crate) fn least_intersect(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn least_intersect(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Include(ref p), &Include(ref o))
+            (Include(p), Include(o))
                 => if p < o {Include(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
+            (Include(p), Exclude(o))
                 => if p < o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Exclude(ref p), &Include(ref o))
+            (Exclude(p), Include(o))
                 => if p <= o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Exclude(ref p), &Exclude(ref o))
+            (Exclude(p), Exclude(o))
                 => if p < o {Exclude(p.clone())} else {Exclude(o.clone())},
 
-            (&Include(ref p), &Infinite) => Include(p.clone()),
+            (Include(p), Infinite) => Include(p.clone()),
 
-            (&Exclude(ref p), &Infinite) => Exclude(p.clone()),
+            (Exclude(p), Infinite) => Exclude(p.clone()),
             
-            (&Infinite, &Include(ref o)) => Include(o.clone()),
+            (Infinite, Include(o)) => Include(o.clone()),
             
-            (&Infinite, &Exclude(ref o)) => Exclude(o.clone()),
+            (Infinite, Exclude(o)) => Exclude(o.clone()),
             
-            _                            => Infinite,
+            _   => Infinite,
         }
     }
 
     /// Returns the union of the given boundaries, or the greatest one if they 
     /// are not at the same point.
-    pub(in crate) fn greatest_union(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn greatest_union(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Include(ref p), &Include(ref o))
+            (Include(p), Include(o))
                 => if p > o {Include(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
+            (Include(p), Exclude(o))
                 => if p >= o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Exclude(ref p), &Include(ref o))
+            (Exclude(p), Include(o))
                 => if p > o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Exclude(ref p), &Exclude(ref o))
+            (Exclude(p), Exclude(o))
                 => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
 
             _   => Infinite,
@@ -477,42 +471,40 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
 
     /// Returns the intersect of the given boundaries, or the greatest one if 
     /// they are not at the same point.
-    pub(in crate) fn greatest_intersect(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn greatest_intersect(&self, other: &Self) -> Self {
         match (self, other) {
-            (&Include(ref p), &Include(ref o))
+            (Include(p), Include(o))
                 => if p > o {Include(p.clone())} else {Include(o.clone())},
 
-            (&Include(ref p), &Exclude(ref o))
+            (Include(p), Exclude(o))
                 => if p > o {Include(p.clone())} else {Exclude(o.clone())},
 
-            (&Exclude(ref p), &Include(ref o))
+            (Exclude(p), Include(o))
                 => if p >= o {Exclude(p.clone())} else {Include(o.clone())},
 
-            (&Exclude(ref p), &Exclude(ref o))
+            (Exclude(p), Exclude(o))
                 => if p > o {Exclude(p.clone())} else {Exclude(o.clone())},
 
-            (&Include(ref p), &Infinite) => Include(p.clone()),
+            (Include(p), Infinite) => Include(p.clone()),
 
-            (&Exclude(ref p), &Infinite) => Exclude(p.clone()),
+            (Exclude(p), Infinite) => Exclude(p.clone()),
 
-            (&Infinite, &Include(ref o)) => Include(o.clone()),
+            (Infinite, Include(o)) => Include(o.clone()),
 
-            (&Infinite, &Exclude(ref o)) => Exclude(o.clone()),
+            (Infinite, Exclude(o)) => Exclude(o.clone()),
 
-            _                            => Infinite,
+            _   => Infinite,
         }
     }
 
     /// Returns `true` if the `Bound` points are considered adjacent under a
     /// union.
-    pub(in crate) fn union_adjacent(&self, other: &Self) -> bool {
-        match (self, other) {
-            (&Include(ref p), &Include(ref o)) |
-            (&Include(ref p), &Exclude(ref o)) |
-            (&Exclude(ref p), &Include(ref o)) if p == o => true,
-
-            _   => false,
-        }
+    pub fn union_adjacent(&self, other: &Self) -> bool {
+        matches!((self, other),
+            (Include(p), Include(o))           |
+            (Include(p), Exclude(o))           |
+            (Exclude(p), Include(o)) if p == o )
     }
 }
 

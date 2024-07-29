@@ -25,7 +25,6 @@
 #![warn(improper_ctypes)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
-#![warn(rustdoc::missing_doc_code_examples)]
 #![warn(missing_docs)]
 #![warn(no_mangle_generic_items)]
 #![warn(non_shorthand_field_patterns)]
@@ -86,10 +85,13 @@
 
 // Non-improvement lints.
 #![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cognitive_complexity)]
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::enum_glob_use)]
 #![allow(clippy::match_bool)]
+#![allow(clippy::match_same_arms)]
 #![allow(clippy::single_match_else)]
+#![allow(clippy::uninlined_format_args)]
 #![allow(clippy::unseparated_literal_suffix)]
 
 // Unreliable lints. May be enabled for spot checking.
@@ -100,12 +102,9 @@
 #![allow(clippy::shadow_unrelated)] // Does not work correctly.
 
 // // Internal modules.
-pub(in crate) mod raw_interval;
-pub(in crate) mod tine;
-pub(in crate) mod tine_tree;
-pub(in crate) mod utility {
-    pub(in crate) use few::Few;
-}
+pub mod raw_interval;
+pub mod tine;
+pub mod tine_tree;
 
 #[cfg(test)]
 mod test;
