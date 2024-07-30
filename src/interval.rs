@@ -1522,18 +1522,18 @@ impl<T> Interval<T>
     /// # //-------------------------------------------------------------------
     /// let a: Interval<i32> = Interval::closed(-3, 5);
     /// let b: Interval<i32> = Interval::closed(5, 15);
-    /// assert_eq!(a.adjacent(&b), true);
+    /// assert_eq!(a .is_adjacent_to(&b), true);
     ///
     /// let a: Interval<i32> = Interval::closed(-3, 5);
     /// let b: Interval<i32> = Interval::closed(8, 12);
-    /// assert_eq!(a.adjacent(&b), false);
+    /// assert_eq!(a .is_adjacent_to(&b), false);
     /// # //-------------------------------------------------------------------
     /// #     Ok(())
     /// # }
     /// ```
-    pub fn adjacent(&self, other: &Self) -> bool {
+    pub fn is_adjacent_to(&self, other: &Self) -> bool {
         // TODO: Consider normalization steps adjacent.
-        self.0.adjacent(&other.0)
+        self.0 .is_adjacent_to(&other.0)
     }
 
     ////////////////////////////////////////////////////////////////////////////

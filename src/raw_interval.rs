@@ -56,8 +56,26 @@ pub enum RawInterval<T> {
     Full,
 }
 
-impl<T> RawInterval<T> where T: Ord + Clone {
+impl<T> RawInterval<T> {
+    // Queries
     ////////////////////////////////////////////////////////////////////////////
+
+    /// Returns `true` if the interval is [`Empty`].
+    ///
+    /// [`Empty`]: #variant.Empty
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
+    }
+
+    /// Returns `true` if the interval is [`Full`].
+    ///
+    /// [`Full`]: #variant.Full
+    pub fn is_full(&self) -> bool {
+        matches!(self, Self::Full)
+    }
+}
+
+impl<T> RawInterval<T> where T: Ord {
     // Constructors
     ////////////////////////////////////////////////////////////////////////////
     
@@ -82,7 +100,7 @@ impl<T> RawInterval<T> where T: Ord + Clone {
             (Infinite,   Infinite)   => Full,
         }
     }
-    
+
     /// Constructs a new [`Open`] interval from the given points. If the upper
     /// point is less than the lower point, an [`Empty`] `RawInterval` will be
     /// returned.
@@ -142,7 +160,29 @@ impl<T> RawInterval<T> where T: Ord + Clone {
         }
     }
 
+    // Queries
     ////////////////////////////////////////////////////////////////////////////
+
+    /// Returns `true` if the interval contains the given point.
+    pub fn contains(&self, point: &T) -> bool {
+        use RawInterval::*;
+        match *self {
+            Empty                   => false,
+            Point(ref p)            => point == p,
+            Open(ref l, ref r)      => point > l && point < r,
+            LeftOpen(ref l, ref r)  => point > l && point <= r,
+            RightOpen(ref l, ref r) => point >= l && point < r,
+            Closed(ref l, ref r)    => point >= l && point <= r,
+            UpTo(ref p)             => point < p,
+            UpFrom(ref p)           => point > p,
+            To(ref p)               => point <= p,
+            From(ref p)             => point >= p,
+            Full                    => true,
+        }
+    }
+}
+
+impl<T> RawInterval<T> where T: Ord + Clone {
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
 
@@ -206,41 +246,6 @@ impl<T> RawInterval<T> where T: Ord + Clone {
         }
     }
 
-    // Query operations
-    ////////////////////////////////////////////////////////////////////////////
-    
-    /// Returns `true` if the interval is [`Empty`].
-    ///
-    /// [`Empty`]: #variant.Empty
-    pub fn is_empty(&self) -> bool {
-        matches!(self, Self::Empty)
-    }
-
-    /// Returns `true` if the interval is [`Full`].
-    ///
-    /// [`Full`]: #variant.Full
-    pub fn is_full(&self) -> bool {
-        matches!(self, Self::Full)
-    }
-
-    /// Returns `true` if the interval contains the given point.
-    pub fn contains(&self, point: &T) -> bool {
-        use RawInterval::*;
-        match *self {
-            Empty                   => false,
-            Point(ref p)            => point == p,
-            Open(ref l, ref r)      => point > l && point < r,
-            LeftOpen(ref l, ref r)  => point > l && point <= r,
-            RightOpen(ref l, ref r) => point >= l && point < r,
-            Closed(ref l, ref r)    => point >= l && point <= r,
-            UpTo(ref p)             => point < p,
-            UpFrom(ref p)           => point > p,
-            To(ref p)               => point <= p,
-            From(ref p)             => point >= p,
-            Full                    => true,
-        }
-    }
-
     // Set comparisons
     ////////////////////////////////////////////////////////////////////////////
     
@@ -250,7 +255,7 @@ impl<T> RawInterval<T> where T: Ord + Clone {
     }
 
     /// Returns `true` if the given intervals share any boundary points.
-    pub fn adjacent(&self, other: &Self) -> bool {
+    pub fn is_adjacent_to(&self, other: &Self) -> bool {
         let a = match (self.lower_bound(), other.upper_bound()) {
             (Some(lb), Some(ub)) => lb.is_union_adjacent_to(&ub),
             _ => false,
@@ -318,7 +323,7 @@ impl<T> RawInterval<T> where T: Ord + Clone {
             (false, true)  => Few::One(self.clone()),
             (false, false) => {
                 // if self.lb > other.ub || other.lb < self.ub
-                if self.intersects(other) || self.adjacent(other) {
+                if self.intersects(other) || self .is_adjacent_to(other) {
                     Few::One(self.enclose(other))
                 } else {
                     Few::Two(self.clone(), other.clone())
@@ -410,7 +415,7 @@ impl<T> RawInterval<T> where T: Ord + Clone {
                 }
                 let mut append = true;
                 for item in &mut prev {
-                    if item.intersects(&next) || item.adjacent(&next) {
+                    if item.intersects(&next) || item .is_adjacent_to(&next) {
                         *item = item.enclose(&next);
                         append = false;
                         break;
