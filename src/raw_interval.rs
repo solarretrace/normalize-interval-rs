@@ -17,6 +17,7 @@ use few::Few;
 
 // Standard library imports.
 use std::cmp::Ordering;
+use std::str::FromStr;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -182,7 +183,7 @@ impl<T> RawInterval<T> where T: Ord {
     }
 }
 
-impl<T> RawInterval<T> where T: Ord + Clone {
+impl<T> RawInterval<T> where T: Clone {
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
 
@@ -245,7 +246,9 @@ impl<T> RawInterval<T> where T: Ord + Clone {
             _ => None,
         }
     }
+}
 
+impl<T> RawInterval<T> where T: Ord + Clone {
     // Set comparisons
     ////////////////////////////////////////////////////////////////////////////
     
@@ -437,15 +440,62 @@ impl<T> std::fmt::Display for RawInterval<T> where T: std::fmt::Display {
         match *self {
             Empty                   => write!(f, "Ø"),
             Point(ref p)            => write!(f, "{}", p),
-            Open(ref l, ref r)      => write!(f, "({}, {})", l, r),
-            LeftOpen(ref l, ref r)  => write!(f, "({}, {}]", l, r),
-            RightOpen(ref l, ref r) => write!(f, "[{}, {})", l, r),
-            Closed(ref l, ref r)    => write!(f, "[{}, {}]", l, r),
-            UpTo(ref p)             => write!(f, "(-∞, {})", p),
-            UpFrom(ref p)           => write!(f, "({}, ∞)", p),
-            To(ref p)               => write!(f, "(-∞, {})", p),
-            From(ref p)             => write!(f, "({}, ∞)", p),
-            Full                    => write!(f, "(-∞, ∞)"),
+            Open(ref l, ref r)      => write!(f, "({},{})", l, r),
+            LeftOpen(ref l, ref r)  => write!(f, "({},{}]", l, r),
+            RightOpen(ref l, ref r) => write!(f, "[{},{})", l, r),
+            Closed(ref l, ref r)    => write!(f, "[{},{}]", l, r),
+            UpTo(ref p)             => write!(f, "(-∞,{})", p),
+            UpFrom(ref p)           => write!(f, "({},∞)", p),
+            To(ref p)               => write!(f, "(-∞,{})", p),
+            From(ref p)             => write!(f, "({},∞)", p),
+            Full                    => write!(f, "(-∞,∞)"),
         }
     }
 }
+
+impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
+    type Err = RawIntervalParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use RawInterval::*;
+        // Parse empty interval.
+        if s.starts_with("Ø") { return Ok(Empty); }
+        // Parse point interval.
+        if let Ok(p) = T::from_str(s) { return Ok(Point(p)); }
+
+        let (x, y) = s.split_once(',')
+            .ok_or(RawIntervalParseError)?;
+
+        let lb = if x.starts_with("(-∞") { 
+            Bound::Infinite
+        } else if x.starts_with("(") {
+            Bound::Exclude(T::from_str(&x[1..])
+                .map_err(|_| RawIntervalParseError)?)
+        } else if x.starts_with("[") {
+            Bound::Include(T::from_str(&x[1..])
+                .map_err(|_| RawIntervalParseError)?)
+        } else {
+            return Err(RawIntervalParseError);
+        };
+
+        let ub = if y.ends_with("∞)") { 
+            Bound::Infinite
+        } else if y.ends_with(")") {
+            let end = y.len() - 1;
+            Bound::Exclude(T::from_str(&y[..end])
+                .map_err(|_| RawIntervalParseError)?)
+        } else if y.ends_with("[") {
+            let end = y.len() - 1;
+            Bound::Include(T::from_str(&y[..end])
+                .map_err(|_| RawIntervalParseError)?)
+        } else {
+            return Err(RawIntervalParseError);
+        };
+
+        Ok(RawInterval::new(lb, ub))
+    }
+}
+
+/// Error type returned by failure to parse a `RawInterval`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RawIntervalParseError;
