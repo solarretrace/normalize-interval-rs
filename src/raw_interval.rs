@@ -252,12 +252,12 @@ impl<T> RawInterval<T> where T: Ord + Clone {
     /// Returns `true` if the given intervals share any boundary points.
     pub fn adjacent(&self, other: &Self) -> bool {
         let a = match (self.lower_bound(), other.upper_bound()) {
-            (Some(lb), Some(ub)) => lb.union_adjacent(&ub),
+            (Some(lb), Some(ub)) => lb.is_union_adjacent_to(&ub),
             _ => false,
 
         };
         let b = match (self.upper_bound(), other.lower_bound()) {
-            (Some(ub), Some(lb)) => lb.union_adjacent(&ub),
+            (Some(ub), Some(lb)) => lb.is_union_adjacent_to(&ub),
             _ => false,
         };
         a || b

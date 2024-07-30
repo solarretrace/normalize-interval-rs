@@ -35,8 +35,7 @@ pub enum Bound<T> {
     Infinite,
 }
 
-
-impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
+impl<T> Bound<T> {
     // Querying the contained values
     ////////////////////////////////////////////////////////////////////////////
 
@@ -394,7 +393,20 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
             Infinite   => Infinite,
         }
     }
+}
 
+impl<T> Bound<T> where T: PartialOrd {
+    /// Returns `true` if the `Bound` points are considered adjacent under a
+    /// union.
+    pub(in crate) fn is_union_adjacent_to(&self, other: &Self) -> bool {
+        matches!((self, other),
+            (Include(p), Include(o))           |
+            (Include(p), Exclude(o))           |
+            (Exclude(p), Include(o)) if p == o )
+    }
+}
+
+impl<T> Bound<T> where T: PartialOrd + Clone {
     // Union and Intersection operators
     ////////////////////////////////////////////////////////////////////////////
 
@@ -497,17 +509,7 @@ impl<T> Bound<T> where T: PartialOrd + PartialEq + Clone {
             _   => Infinite,
         }
     }
-
-    /// Returns `true` if the `Bound` points are considered adjacent under a
-    /// union.
-    pub fn union_adjacent(&self, other: &Self) -> bool {
-        matches!((self, other),
-            (Include(p), Include(o))           |
-            (Include(p), Exclude(o))           |
-            (Exclude(p), Include(o)) if p == o )
-    }
 }
-
 
 // Default `Bound` is closed.
 impl<T> Default for Bound<T> where T: Default {
