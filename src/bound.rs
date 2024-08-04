@@ -398,6 +398,7 @@ impl<T> Bound<T> {
 impl<T> Bound<T> where T: PartialOrd {
     /// Returns `true` if the `Bound` points are considered adjacent under a
     /// union.
+    #[allow(clippy::unnested_or_patterns)]
     pub(in crate) fn is_union_adjacent_to(&self, other: &Self) -> bool {
         matches!((self, other),
             (Include(p), Include(o))           |

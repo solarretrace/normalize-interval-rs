@@ -446,8 +446,8 @@ impl<T> std::fmt::Display for RawInterval<T> where T: std::fmt::Display {
             Closed(ref l, ref r)    => write!(f, "[{},{}]", l, r),
             UpTo(ref p)             => write!(f, "(-∞,{})", p),
             UpFrom(ref p)           => write!(f, "({},∞)", p),
-            To(ref p)               => write!(f, "(-∞,{})", p),
-            From(ref p)             => write!(f, "({},∞)", p),
+            To(ref p)               => write!(f, "(-∞,{}]", p),
+            From(ref p)             => write!(f, "[{},∞)", p),
             Full                    => write!(f, "(-∞,∞)"),
         }
     }
@@ -468,31 +468,31 @@ impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
 
         let lb = if x.starts_with("(-∞") { 
             Bound::Infinite
-        } else if x.starts_with("(") {
-            Bound::Exclude(T::from_str(&x[1..])
-                .map_err(|_| RawIntervalParseError)?)
-        } else if x.starts_with("[") {
-            Bound::Include(T::from_str(&x[1..])
-                .map_err(|_| RawIntervalParseError)?)
+        } else if let Some(res) = x.strip_prefix('(') {
+            Bound::Exclude(T::from_str(res)
+                .map_err(|_e| RawIntervalParseError)?)
+        } else if let Some(res) = x.strip_prefix('[') {
+            Bound::Include(T::from_str(res)
+                .map_err(|_e| RawIntervalParseError)?)
         } else {
             return Err(RawIntervalParseError);
         };
 
         let ub = if y.ends_with("∞)") { 
             Bound::Infinite
-        } else if y.ends_with(")") {
+        } else if y.ends_with(')') {
             let end = y.len() - 1;
             Bound::Exclude(T::from_str(&y[..end])
-                .map_err(|_| RawIntervalParseError)?)
-        } else if y.ends_with("[") {
+                .map_err(|_e| RawIntervalParseError)?)
+        } else if y.ends_with(']') {
             let end = y.len() - 1;
             Bound::Include(T::from_str(&y[..end])
-                .map_err(|_| RawIntervalParseError)?)
+                .map_err(|_e| RawIntervalParseError)?)
         } else {
             return Err(RawIntervalParseError);
         };
 
-        Ok(RawInterval::new(lb, ub))
+        Ok(Self::new(lb, ub))
     }
 }
 

@@ -184,10 +184,9 @@ impl<T> TineTree<T> where T: Ord + Clone {
                     if i.is_empty() {
                         // Nothing else overlaps in this segment.
                         break 'segment;
-                    } else {
-                        intersection.union_in_place(&i);
                     }
 
+                    intersection.union_in_place(&i);
                 } else {
                     // Nothing else overlaps anywhere.
                     return intersection;

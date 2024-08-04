@@ -18,6 +18,7 @@ mod enclose;
 mod intersect;
 mod minus;
 mod union;
+mod parse;
 
 // Internal library imports.
 use crate::raw_interval::RawInterval;
