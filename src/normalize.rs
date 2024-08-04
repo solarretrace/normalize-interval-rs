@@ -16,14 +16,14 @@ use crate::raw_interval::RawInterval;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Finite
+// Countable
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides the methods needed to iterate over an type's points. Used
 /// to [`Normalize`] finite types used in [`Interval`] bounds.
 ///
 /// [`Normalize`]: trait.Normalize.html
 /// [`Interval`]: ../interval/struct.Interval.html
-pub trait Finite: Sized {
+pub trait Countable: Sized {
     /// The minimum value of the type.
     const MINIMUM: Self;
 
@@ -76,8 +76,8 @@ pub trait Normalize {
 //     default fn denormalize(&mut self) {/* Do nothing. */}
 // }
 
-/// Specialization for [`Finite`] intervals.
-impl<T> Normalize for RawInterval<T> where T: Finite {
+/// Specialization for [`Countable`] intervals.
+impl<T> Normalize for RawInterval<T> where T: Countable {
     fn normalize(&mut self) {
         use RawInterval::*;
         *self = match std::mem::replace(self, Empty) {
@@ -134,14 +134,14 @@ impl<T> Normalize for RawInterval<T> where T: Finite {
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Standard integer Finite implementations
+// Standard integer Countable implementations
 ////////////////////////////////////////////////////////////////////////////////
 
 // Implements basic normalization for a single builtin integer type.
-macro_rules! std_integer_finite_impl {
+macro_rules! std_integer_countable_impl {
     // For each given type...
     ($($t:ident),*) => {
-        $(impl Finite for $t {
+        $(impl Countable for $t {
             const MINIMUM: $t = {$t::MIN};
             const MAXIMUM: $t = {$t::MAX};
 
@@ -156,11 +156,32 @@ macro_rules! std_integer_finite_impl {
     };
 }
 
-// Provide implementations of Finite for builtin integer types.
-std_integer_finite_impl![
+// Provide implementations of Countable for builtin integer types.
+std_integer_countable_impl![
     u8, u16, u32, u64, u128, usize,
     i8, i16, i32, i64, i128, isize
 ];
 
 
-// TODO: Use nextUp and nextDown IEEE 754 functions to normalize float values?
+// TODO: Implement when https://github.com/rust-lang/rust/issues/91399 is
+// complete and `next_down`, `next_up` are stable.
+// macro_rules! std_float_countable_impl {
+//     // For each given type...
+//     ($($t:ident),*) => {
+//         $(impl Countable for $t {
+//             const MINIMUM: $t = {$t::MIN};
+//             const MAXIMUM: $t = {$t::MAX};
+
+//             fn pred(&self) -> Option<Self> {
+//                 (*self != $t::MIN).then(|| self.next_down())
+//             }
+
+//             fn succ(&self) -> Option<Self> {
+//                 (*self != $t::MAX).then(|| self.next_up())
+//             }
+//         })*
+//     };
+// }
+
+// Provide implementations of Countable for builtin float types.
+// std_float_countable_impl![f32, f64];

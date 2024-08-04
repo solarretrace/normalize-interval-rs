@@ -13,7 +13,7 @@
 
 // Internal library imports.
 use crate::bound::Bound;
-use crate::normalize::Finite;
+use crate::normalize::Countable;
 use crate::normalize::Normalize;
 use crate::raw_interval::RawInterval;
 
@@ -38,11 +38,11 @@ use std::ops::Sub;
 ////////////////////////////////////////////////////////////////////////////////
 /// A contiguous interval of the type T.
 ///
-/// `Interval`s are [`Normalize`]d when created. For [`Finite`] types, open
+/// `Interval`s are [`Normalize`]d when created. For [`Countable`] types, open
 /// bounds will be converted to the nearest contained closed bound.
 ///
 /// [`Normalize`]: ../normalize/trait.Normalize.html
-/// [`Finite`]: ../normalize/trait.Finite.html
+/// [`Countable`]: ../normalize/trait.Countable.html
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
@@ -88,9 +88,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -185,9 +185,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -239,9 +239,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -309,9 +309,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -431,9 +431,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -501,9 +501,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -572,9 +572,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -612,9 +612,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -652,9 +652,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -692,9 +692,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -731,9 +731,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -812,9 +812,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -856,9 +856,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -897,9 +897,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -938,9 +938,9 @@ impl<T> Interval<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -1785,11 +1785,11 @@ impl<T> From<RangeFull> for Interval<T>
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Finite iteration support
+// Countable iteration support
 ////////////////////////////////////////////////////////////////////////////////
-impl<T> Interval<T> where T: Ord + Clone + Finite {
+impl<T> Interval<T> where T: Ord + Clone + Countable {
     /// Returns an `Iterator` over the points in the `Interval`. Only defined
-    /// for `Finite` `Interval`s.
+    /// for `Countable` `Interval`s.
     ///
     /// # Examples
     ///
@@ -1828,7 +1828,7 @@ impl<T> Interval<T> where T: Ord + Clone + Finite {
 
 
 impl<T> IntoIterator for Interval<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
     type IntoIter = Iter<T>;
@@ -1840,7 +1840,7 @@ impl<T> IntoIterator for Interval<T>
 
 
 impl<'a, T> IntoIterator for &'a Interval<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
     type IntoIter = Iter<T>;
@@ -1861,7 +1861,7 @@ pub struct Iter<T> where T: Ord + Clone {
 }
 
 impl<T> Iterator for Iter<T>
-    where T: Ord + Clone + Finite
+    where T: Ord + Clone + Countable
 {
     type Item = T;
 
@@ -1875,13 +1875,13 @@ impl<T> Iterator for Iter<T>
                 Some(lb)
             },
             None => None,
-            _ => unreachable!("iter for Finite interval with open lower bound"),
+            _ => unreachable!("iter for Countable interval with open lower bound"),
         }
     }
 }
 
 impl<T> DoubleEndedIterator for Iter<T>
-    where T: Ord + Clone + Finite
+    where T: Ord + Clone + Countable
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.inner.upper_bound() {
@@ -1893,12 +1893,12 @@ impl<T> DoubleEndedIterator for Iter<T>
                 Some(ub)
             },
             None => None,
-            _ => unreachable!("iter for Finite interval with open upper bound"),
+            _ => unreachable!("iter for Countable interval with open upper bound"),
         }
     }
 }
 
 impl<T> FusedIterator for Iter<T> 
     where
-        T: Ord + Clone + Finite
+        T: Ord + Clone + Countable
 {}

@@ -14,8 +14,8 @@
 // Internal library imports.
 use crate::bound::Bound;
 use crate::interval::Interval;
+use crate::normalize::Countable;
 use crate::normalize::Normalize;
-use crate::normalize::Finite;
 use crate::raw_interval::RawInterval;
 use crate::tine_tree::TineTree;
 
@@ -135,9 +135,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -181,9 +181,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -225,9 +225,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -269,9 +269,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -529,9 +529,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -575,9 +575,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -618,9 +618,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -739,9 +739,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -782,9 +782,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -825,9 +825,9 @@ impl<T> Selection<T>
     /// # }
     /// ```
     ///
-    /// [`Finite`] types will have their bounds closed:
+    /// [`Countable`] types will have their bounds closed:
     ///
-    /// [`Finite`]: ../normalize/trait.Finite.html
+    /// [`Countable`]: ../normalize/trait.Countable.html
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -866,7 +866,7 @@ impl<T> Selection<T>
 }
 
 impl<T> Selection<T> 
-    where T: Ord + Clone + Finite, 
+    where T: Ord + Clone + Countable, 
 {
     /// Returns an iterator over each of the points in the `Selection`.
     #[must_use]
@@ -879,7 +879,7 @@ impl<T> Selection<T>
 }
 
 impl<T> IntoIterator for Selection<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
     type IntoIter = IntoIter<T>;
@@ -893,7 +893,7 @@ impl<T> IntoIterator for Selection<T>
 }
 
 impl<'a, T> IntoIterator for &'a Selection<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
     type IntoIter = Iter<'a, T>;
@@ -1061,7 +1061,7 @@ pub struct IntoIter<T>
 }
 
 impl<T> Iterator for IntoIter<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
 
@@ -1084,7 +1084,7 @@ impl<T> Iterator for IntoIter<T>
 }
 
 impl<T> DoubleEndedIterator for IntoIter<T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         if let Some(next_back) = self.current.next_back() {
@@ -1105,7 +1105,7 @@ impl<T> DoubleEndedIterator for IntoIter<T>
 }
 
 impl<T> FusedIterator for IntoIter<T> 
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1114,7 +1114,7 @@ impl<T> FusedIterator for IntoIter<T>
 /// An `Iterator` over the points of a `Selection`.
 #[derive(Debug)]
 pub struct Iter<'t, T> 
-    where T: Ord + Clone + Finite
+    where T: Ord + Clone + Countable
 {
     /// The interval iterator of the `TineTree`.
     intervals: crate::tine_tree::Iter<'t, T>,
@@ -1123,7 +1123,7 @@ pub struct Iter<'t, T>
 }
 
 impl<'t, T> Iterator for Iter<'t, T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     type Item = T;
 
@@ -1146,7 +1146,7 @@ impl<'t, T> Iterator for Iter<'t, T>
 }
 
 impl<'t, T> DoubleEndedIterator for Iter<'t, T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         if let Some(next_back) = self.current.next_back() {
@@ -1167,5 +1167,5 @@ impl<'t, T> DoubleEndedIterator for Iter<'t, T>
 }
 
 impl<'t, T> FusedIterator for Iter<'t, T>
-    where T: Ord + Clone + Finite,
+    where T: Ord + Clone + Countable,
 {}
