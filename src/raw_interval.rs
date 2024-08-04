@@ -454,7 +454,7 @@ impl<T> std::fmt::Display for RawInterval<T> where T: std::fmt::Display {
 }
 
 impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
-    type Err = RawIntervalParseError;
+    type Err = IntervalParseError<T::Err>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use RawInterval::*;
@@ -464,18 +464,18 @@ impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
         if let Ok(p) = T::from_str(s) { return Ok(Point(p)); }
 
         let (x, y) = s.split_once(',')
-            .ok_or(RawIntervalParseError)?;
+            .ok_or(IntervalParseError::InvalidInterval)?;
 
         let lb = if x.starts_with("(-∞") { 
             Bound::Infinite
         } else if let Some(res) = x.strip_prefix('(') {
             Bound::Exclude(T::from_str(res)
-                .map_err(|_e| RawIntervalParseError)?)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
         } else if let Some(res) = x.strip_prefix('[') {
             Bound::Include(T::from_str(res)
-                .map_err(|_e| RawIntervalParseError)?)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
         } else {
-            return Err(RawIntervalParseError);
+            return Err(IntervalParseError::InvalidInterval);
         };
 
         let ub = if y.ends_with("∞)") { 
@@ -483,13 +483,13 @@ impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
         } else if y.ends_with(')') {
             let end = y.len() - 1;
             Bound::Exclude(T::from_str(&y[..end])
-                .map_err(|_e| RawIntervalParseError)?)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
         } else if y.ends_with(']') {
             let end = y.len() - 1;
             Bound::Include(T::from_str(&y[..end])
-                .map_err(|_e| RawIntervalParseError)?)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
         } else {
-            return Err(RawIntervalParseError);
+            return Err(IntervalParseError::InvalidInterval);
         };
 
         Ok(Self::new(lb, ub))
@@ -498,4 +498,10 @@ impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
 
 /// Error type returned by failure to parse a `RawInterval`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RawIntervalParseError;
+pub enum IntervalParseError<E> {
+    /// An error occurred during the interval parse.
+    InvalidInterval,
+    /// An error occurred during a value parse.
+    InvalidValue(E),
+}
+
