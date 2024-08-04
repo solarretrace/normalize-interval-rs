@@ -19,6 +19,10 @@ use crate::normalize::Finite;
 use crate::raw_interval::RawInterval;
 use crate::tine_tree::TineTree;
 
+// External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
+
 // Standard library imports.
 use std::iter::FromIterator;
 use std::iter::FusedIterator;
@@ -30,6 +34,11 @@ use std::iter::FusedIterator;
 ////////////////////////////////////////////////////////////////////////////////
 /// A possibly noncontiguous collection of `Interval`s of the type `T`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature="serde", serde(transparent))]
+#[cfg_attr(feature="serde", 
+    serde(bound="for<'a> T: Ord + Serialize + Deserialize<'a> + Clone + 'a"))]
 pub struct Selection<T>(TineTree<T>);
 
 impl<T> Default for Selection<T> 

@@ -14,6 +14,8 @@ use crate::bound::Bound;
 use crate::raw_interval::RawInterval;
 
 // External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
 use few::Few;
 
 // Standard library imports.
@@ -29,6 +31,7 @@ use std::cmp::Ordering;
 /// that the `TineTree` will always be able to split at the appropriate place
 /// for a given bound type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
 pub enum Tine<T> {
     /// The lower `Bound` of an `Interval`.
     Lower(Bound<T>),

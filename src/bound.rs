@@ -11,6 +11,10 @@
 //!
 ////////////////////////////////////////////////////////////////////////////////
 
+// External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
+
 // Standard library imports.
 use std::borrow::Borrow;
 use std::default::Default;
@@ -26,6 +30,7 @@ use self::Bound::*;
 ///
 /// [`Interval`]: struct.Interval.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
 pub enum Bound<T> {
     /// The bound includes the point.
     Include(T),

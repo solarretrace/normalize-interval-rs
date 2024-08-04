@@ -13,6 +13,8 @@
 use crate::bound::Bound;
 
 // External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
 use few::Few;
 
 // Standard library imports.
@@ -28,6 +30,7 @@ use std::str::FromStr;
 /// 
 /// [`Interval`]: interval/struct.Interval.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
 pub enum RawInterval<T> {
     /// An interval containing no points.
     Empty,

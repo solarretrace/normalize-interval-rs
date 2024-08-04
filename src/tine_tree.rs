@@ -18,6 +18,8 @@ use crate::raw_interval::RawInterval;
 use crate::tine::Tine;
 
 // External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
 use few::Few;
 
 // Standard library imports.
@@ -41,7 +43,12 @@ use std::iter::FromIterator;
 /// [`Tine`]: tine_tree/struct.Tine.html
 /// [`Interval`]: interval/struct.Interval.html
 ///
+#[repr(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature="serde", serde(transparent))]
+#[cfg_attr(feature="serde", 
+    serde(bound="for<'a> T: Ord + Serialize + Deserialize<'a> + Clone + 'a"))]
 pub struct TineTree<T>(BTreeSet<Tine<T>>);
 
 impl<T> TineTree<T> where T: Ord + Clone {

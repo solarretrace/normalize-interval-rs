@@ -17,6 +17,10 @@ use crate::normalize::Finite;
 use crate::normalize::Normalize;
 use crate::raw_interval::RawInterval;
 
+// External library imports.
+#[cfg(feature="serde")] use serde::Deserialize;
+#[cfg(feature="serde")] use serde::Serialize;
+
 // Standard library imports.
 use std::iter::FusedIterator;
 use std::ops::Range;
@@ -39,7 +43,10 @@ use std::ops::Sub;
 ///
 /// [`Normalize`]: ../normalize/trait.Normalize.html
 /// [`Finite`]: ../normalize/trait.Finite.html
+#[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature="serde", serde(transparent))]
 pub struct Interval<T>(pub (crate) RawInterval<T>);
 
 impl<T> Default for Interval<T>
