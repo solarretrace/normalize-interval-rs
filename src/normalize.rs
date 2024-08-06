@@ -16,14 +16,14 @@ use crate::raw_interval::RawInterval;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Countable
+// Finite
 ////////////////////////////////////////////////////////////////////////////////
 /// Provides the methods needed to iterate over an type's points. Used
 /// to [`Normalize`] finite types used in [`Interval`] bounds.
 ///
 /// [`Normalize`]: trait.Normalize.html
 /// [`Interval`]: ../interval/struct.Interval.html
-pub trait Countable: Sized {
+pub trait Finite: Sized {
     /// The minimum value of the type.
     const MINIMUM: Self;
 
@@ -76,8 +76,8 @@ pub trait Normalize {
 //     default fn denormalize(&mut self) {/* Do nothing. */}
 // }
 
-/// Specialization for [`Countable`] intervals.
-impl<T> Normalize for RawInterval<T> where T: Countable {
+/// Specialization for [`Finite`] intervals.
+impl<T> Normalize for RawInterval<T> where T: Finite {
     fn normalize(&mut self) {
         use RawInterval::*;
         *self = match std::mem::replace(self, Empty) {
@@ -134,14 +134,14 @@ impl<T> Normalize for RawInterval<T> where T: Countable {
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Standard integer Countable implementations
+// Standard integer Finite implementations
 ////////////////////////////////////////////////////////////////////////////////
 
 // Implements basic normalization for a single builtin integer type.
 macro_rules! std_integer_countable_impl {
     // For each given type...
     ($($t:ident),*) => {
-        $(impl Countable for $t {
+        $(impl Finite for $t {
             const MINIMUM: $t = {$t::MIN};
             const MAXIMUM: $t = {$t::MAX};
 
@@ -156,7 +156,7 @@ macro_rules! std_integer_countable_impl {
     };
 }
 
-// Provide implementations of Countable for builtin integer types.
+// Provide implementations of Finite for builtin integer types.
 std_integer_countable_impl![
     u8, u16, u32, u64, u128, usize,
     i8, i16, i32, i64, i128, isize
@@ -168,7 +168,7 @@ std_integer_countable_impl![
 // macro_rules! std_float_countable_impl {
 //     // For each given type...
 //     ($($t:ident),*) => {
-//         $(impl Countable for $t {
+//         $(impl Finite for $t {
 //             const MINIMUM: $t = {$t::MIN};
 //             const MAXIMUM: $t = {$t::MAX};
 
@@ -183,5 +183,5 @@ std_integer_countable_impl![
 //     };
 // }
 
-// Provide implementations of Countable for builtin float types.
+// Provide implementations of Finite for builtin float types.
 // std_float_countable_impl![f32, f64];

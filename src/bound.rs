@@ -315,7 +315,7 @@ impl<T> Bound<T> {
     }
 
     /// Applyies a function to a contained value (if finite) or returns a 
-    /// default value (if [`Infinte`]).
+    /// default value (if [`Infinite`]).
     ///
     /// [`Infinite`]: #variant.Infinite
     ///
@@ -341,7 +341,7 @@ impl<T> Bound<T> {
     }
 
     /// Applyies a function to a contained value (if finite) or returns a 
-    /// computed value (if [`Infinte`]).
+    /// computed value (if [`Infinite`]).
     ///
     /// [`Infinite`]: #variant.Infinite
     ///
