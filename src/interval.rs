@@ -16,6 +16,7 @@ use crate::bound::Bound;
 use crate::normalize::Finite;
 use crate::normalize::Normalize;
 use crate::raw_interval::RawInterval;
+use crate::raw_interval::IntervalParseError;
 
 // External library imports.
 #[cfg(feature="serde")] use serde::Deserialize;
@@ -30,6 +31,7 @@ use std::ops::RangeFull;
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 use std::ops::Sub;
+use std::str::FromStr;
 
 
 
@@ -1902,3 +1904,19 @@ impl<T> FusedIterator for Iter<T>
     where
         T: Ord + Clone + Finite
 {}
+
+
+// Display using interval notation.
+impl<T> std::fmt::Display for Interval<T> where T: std::fmt::Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<T> FromStr for Interval<T> where T: Ord + FromStr + Finite {
+    type Err = IntervalParseError<T::Err>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(RawInterval::<T>::from_str(s)?.normalized()))
+    }
+}
