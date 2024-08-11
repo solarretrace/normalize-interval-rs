@@ -1950,3 +1950,74 @@ impl<T> FromStr for Interval<T> where T: Ord + FromStr + Finite {
         Ok(Self(RawInterval::<T>::from_str(s)?.normalized()))
     }
 }
+
+impl<T> std::fmt::Binary for Interval<T>
+    where T: std::fmt::Binary
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::Binary::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::Octal for Interval<T>
+    where T: std::fmt::Octal
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::Octal::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::LowerHex for Interval<T>
+    where T: std::fmt::LowerHex
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::LowerHex::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::UpperHex for Interval<T>
+    where T: std::fmt::UpperHex
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::UpperHex::fmt(p, f))
+    }
+}
+
+
+impl<T> std::fmt::LowerExp for Interval<T>
+    where T: std::fmt::LowerExp
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::LowerExp::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::UpperExp for Interval<T>
+    where T: std::fmt::UpperExp
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::UpperExp::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::Pointer for Interval<T>
+    where T: std::fmt::Pointer
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.0.write_fmt_with(f, |p, f| std::fmt::Pointer::fmt(p, f))
+    }
+}
