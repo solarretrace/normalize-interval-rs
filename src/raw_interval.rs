@@ -77,6 +77,73 @@ impl<T> RawInterval<T> {
     pub fn is_full(&self) -> bool {
         matches!(self, Self::Full)
     }
+
+    /// Writes the `RawInterval` to the given [`Formatter`] using a specified
+    /// function to write the interval's boundary points.
+    ///
+    /// [`Formatter`]: std::fmt::Formatter
+    pub fn write_fmt_with<F>(&self,
+        f: &mut std::fmt::Formatter<'_>,
+        write_fn: F)
+        -> Result<(), std::fmt::Error> 
+        where F: Fn(&T, &mut std::fmt::Formatter<'_>) 
+            -> Result<(), std::fmt::Error> 
+    {
+        use RawInterval::*;
+        match *self {
+            Empty => write!(f, "Ø"),
+            Point(ref p) => write_fn(p, f),
+            Open(ref l, ref r) => {
+                write!(f, "(")?;
+                write_fn(l, f)?;
+                write!(f, ",")?;
+                write_fn(r, f)?;
+                write!(f, ")")
+            },
+            LeftOpen(ref l, ref r) => {
+                write!(f, "(")?;
+                write_fn(l, f)?;
+                write!(f, ",")?;
+                write_fn(r, f)?;
+                write!(f, "]")
+            },
+            RightOpen(ref l, ref r) => {
+                write!(f, "[")?;
+                write_fn(l, f)?;
+                write!(f, ",")?;
+                write_fn(r, f)?;
+                write!(f, ")")
+            },
+            Closed(ref l, ref r) => {
+                write!(f, "[")?;
+                write_fn(l, f)?;
+                write!(f, ",")?;
+                write_fn(r, f)?;
+                write!(f, "]")
+            },
+            UpTo(ref p) => {
+                write!(f, "(-∞,")?;
+                write_fn(p, f)?;
+                write!(f, ")")
+            },
+            UpFrom(ref p) => {
+                write!(f, "(")?;
+                write_fn(p, f)?;
+                write!(f, ",∞)")
+            },
+            To(ref p) => {
+                write!(f, "(-∞,")?;
+                write_fn(p, f)?;
+                write!(f, "]")
+            },
+            From(ref p) => {
+                write!(f, "[")?;
+                write_fn(p, f)?;
+                write!(f, ",∞)")
+            },
+            Full => write!(f, "(-∞,∞)"),
+        }
+    }
 }
 
 impl<T> RawInterval<T> where T: Ord {
@@ -183,6 +250,50 @@ impl<T> RawInterval<T> where T: Ord {
             From(ref p)             => point >= p,
             Full                    => true,
         }
+    }
+
+    /// Parses a `RawInterval` from a string using the specified function to
+    /// parse the interval's boundary points.
+    pub fn from_str_with<F, E>(s: &str, read_fn: F)
+        -> Result<Self, IntervalParseError<E>>
+        where F: Fn(&str) -> Result<T, E> 
+    {
+        use RawInterval::*;
+        // Parse empty interval.
+        if s.starts_with("Ø") { return Ok(Empty); }
+        // Parse point interval.
+        if let Ok(p) = read_fn(s) { return Ok(Point(p)); }
+
+        let (x, y) = s.split_once(',')
+            .ok_or(IntervalParseError::InvalidInterval)?;
+
+        let lb = if x.starts_with("(-∞") { 
+            Bound::Infinite
+        } else if let Some(res) = x.strip_prefix('(') {
+            Bound::Exclude(read_fn(res)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
+        } else if let Some(res) = x.strip_prefix('[') {
+            Bound::Include(read_fn(res)
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
+        } else {
+            return Err(IntervalParseError::InvalidInterval);
+        };
+
+        let ub = if y.ends_with("∞)") { 
+            Bound::Infinite
+        } else if y.ends_with(')') {
+            let end = y.len() - 1;
+            Bound::Exclude(read_fn(&y[..end])
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
+        } else if y.ends_with(']') {
+            let end = y.len() - 1;
+            Bound::Include(read_fn(&y[..end])
+                .map_err(|e| IntervalParseError::InvalidValue(e))?)
+        } else {
+            return Err(IntervalParseError::InvalidInterval);
+        };
+
+        Ok(Self::new(lb, ub))
     }
 }
 
@@ -439,20 +550,7 @@ impl<T> RawInterval<T> where T: Ord + Clone {
 // Display using interval notation.
 impl<T> std::fmt::Display for RawInterval<T> where T: std::fmt::Display {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use RawInterval::*;
-        match *self {
-            Empty                   => write!(f, "Ø"),
-            Point(ref p)            => write!(f, "{}", p),
-            Open(ref l, ref r)      => write!(f, "({},{})", l, r),
-            LeftOpen(ref l, ref r)  => write!(f, "({},{}]", l, r),
-            RightOpen(ref l, ref r) => write!(f, "[{},{})", l, r),
-            Closed(ref l, ref r)    => write!(f, "[{},{}]", l, r),
-            UpTo(ref p)             => write!(f, "(-∞,{})", p),
-            UpFrom(ref p)           => write!(f, "({},∞)", p),
-            To(ref p)               => write!(f, "(-∞,{}]", p),
-            From(ref p)             => write!(f, "[{},∞)", p),
-            Full                    => write!(f, "(-∞,∞)"),
-        }
+        self.write_fmt_with(f, |p, f| write!(f, "{}", p))
     }
 }
 
@@ -460,42 +558,7 @@ impl<T> FromStr for RawInterval<T> where T: Ord + FromStr {
     type Err = IntervalParseError<T::Err>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use RawInterval::*;
-        // Parse empty interval.
-        if s.starts_with("Ø") { return Ok(Empty); }
-        // Parse point interval.
-        if let Ok(p) = T::from_str(s) { return Ok(Point(p)); }
-
-        let (x, y) = s.split_once(',')
-            .ok_or(IntervalParseError::InvalidInterval)?;
-
-        let lb = if x.starts_with("(-∞") { 
-            Bound::Infinite
-        } else if let Some(res) = x.strip_prefix('(') {
-            Bound::Exclude(T::from_str(res)
-                .map_err(|e| IntervalParseError::InvalidValue(e))?)
-        } else if let Some(res) = x.strip_prefix('[') {
-            Bound::Include(T::from_str(res)
-                .map_err(|e| IntervalParseError::InvalidValue(e))?)
-        } else {
-            return Err(IntervalParseError::InvalidInterval);
-        };
-
-        let ub = if y.ends_with("∞)") { 
-            Bound::Infinite
-        } else if y.ends_with(')') {
-            let end = y.len() - 1;
-            Bound::Exclude(T::from_str(&y[..end])
-                .map_err(|e| IntervalParseError::InvalidValue(e))?)
-        } else if y.ends_with(']') {
-            let end = y.len() - 1;
-            Bound::Include(T::from_str(&y[..end])
-                .map_err(|e| IntervalParseError::InvalidValue(e))?)
-        } else {
-            return Err(IntervalParseError::InvalidInterval);
-        };
-
-        Ok(Self::new(lb, ub))
+        Self::from_str_with(s, T::from_str)
     }
 }
 
@@ -508,3 +571,74 @@ pub enum IntervalParseError<E> {
     InvalidValue(E),
 }
 
+
+impl<T> std::fmt::Binary for RawInterval<T>
+    where T: std::fmt::Binary
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::Binary::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::Octal for RawInterval<T>
+    where T: std::fmt::Octal
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::Octal::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::LowerHex for RawInterval<T>
+    where T: std::fmt::LowerHex
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::LowerHex::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::UpperHex for RawInterval<T>
+    where T: std::fmt::UpperHex
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::UpperHex::fmt(p, f))
+    }
+}
+
+
+impl<T> std::fmt::LowerExp for RawInterval<T>
+    where T: std::fmt::LowerExp
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::LowerExp::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::UpperExp for RawInterval<T>
+    where T: std::fmt::UpperExp
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::UpperExp::fmt(p, f))
+    }
+}
+
+impl<T> std::fmt::Pointer for RawInterval<T>
+    where T: std::fmt::Pointer
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+        -> Result<(), std::fmt::Error>
+    {
+        self.write_fmt_with(f, |p, f| std::fmt::Pointer::fmt(p, f))
+    }
+}

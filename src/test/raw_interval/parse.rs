@@ -46,6 +46,29 @@ fn round_trip_point() {
     assert_eq!(a, parsed);
 }
 
+
+#[test]
+fn round_trip_point_octal() {
+    let a: RawInterval<i32> = Point(3);
+    let gened = format!("{:#o}", a);
+    let parsed = RawInterval::<i32>::from_str_with(&gened, 
+        |i| i32::from_str_radix(&i[2..], 8))
+        .expect("successful parse");
+    assert_eq!(gened, "0o3");
+    assert_eq!(a, parsed);
+}
+
+#[test]
+fn round_trip_point_hex_lower() {
+    let a: RawInterval<i32> = Point(3);
+    let gened = format!("{:#x}", a);
+    let parsed = RawInterval::<i32>::from_str_with(&gened, 
+        |i| i32::from_str_radix(&i[2..], 16))
+        .expect("successful parse");
+    assert_eq!(gened, "0x3");
+    assert_eq!(a, parsed);
+}
+
 #[test]
 fn round_trip_open() {
     let a: RawInterval<i32> = Open(0, 3);

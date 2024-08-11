@@ -61,6 +61,36 @@ impl<T> Default for Interval<T>
     }
 }
 
+impl<T> Interval<T> 
+    where
+        T: Ord + Clone,
+        RawInterval<T>: Normalize,
+{
+    /// Writes the `Interval` to the given [`Formatter`] using a specified
+    /// function to write the interval's boundary points.
+    ///
+    /// [`Formatter`]: std::fmt::Formatter
+    pub fn write_fmt_with<F>(&self,
+        f: &mut std::fmt::Formatter<'_>,
+        write_fn: F)
+        -> Result<(), std::fmt::Error> 
+        where F: Fn(&T, &mut std::fmt::Formatter<'_>) 
+            -> Result<(), std::fmt::Error> 
+    {
+        self.0.write_fmt_with(f, write_fn)
+    }
+
+    /// Parses an `Interval` from a string using the specified function to
+    /// parse the interval's boundary points.
+    pub fn from_str_with<F, E>(s: &str, read_fn: F)
+        -> Result<Self, IntervalParseError<E>>
+        where F: Fn(&str) -> Result<T, E> 
+    {
+        Ok(Self(RawInterval::<T>::from_str_with(s, read_fn)?.normalized()))
+    }
+}
+
+
 // All mutable operations and constructors on `Interval` must ensure that the
 // interval is normalized before returning.
 impl<T> Interval<T> 
