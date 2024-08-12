@@ -301,6 +301,26 @@ impl<T> RawInterval<T> where T: Clone {
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
 
+    /// Returns the lower and upper bound of the interval, or `None` if the
+    /// interval is empty.
+    pub fn bounds(&self) -> Option<(Bound<T>, Bound<T>)> {
+        use Bound::*;
+        use RawInterval::*;
+        Some(match *self {
+            Empty                   => return None,
+            Point(ref p)            => (Include(p.clone()), Include(p.clone())),
+            Open(ref l, ref r)      => (Exclude(l.clone()), Exclude(r.clone())),
+            LeftOpen(ref l, ref r)  => (Exclude(l.clone()), Include(r.clone())),
+            RightOpen(ref l, ref r) => (Include(l.clone()), Exclude(r.clone())),
+            Closed(ref l, ref r)    => (Include(l.clone()), Include(r.clone())),
+            UpTo(ref p)             => (Infinite, Exclude(p.clone())),
+            UpFrom(ref p)           => (Exclude(p.clone()), Infinite),
+            To(ref p)               => (Infinite, Include(p.clone())),
+            From(ref p)             => (Include(p.clone()), Infinite),
+            Full                    => (Infinite, Infinite),
+        })
+    }
+
     /// Returns the lower bound of the interval, or `None` if the interval is
     /// empty.
     pub fn lower_bound(&self) -> Option<Bound<T>> {
@@ -341,7 +361,7 @@ impl<T> RawInterval<T> where T: Clone {
         })
     }
 
-    /// Returns the greatest lower bound of the interval.
+    /// Returns the greatest lower bound of the interval, if it exists.
     pub fn infimum(&self) -> Option<T> {
         use Bound::*;
         match self.lower_bound() {
@@ -351,12 +371,21 @@ impl<T> RawInterval<T> where T: Clone {
         }
     }
     
-    /// Returns the least upper bound of the interval.
+    /// Returns the least upper bound of the interval, if it exists.
     pub fn supremum(&self) -> Option<T> {
         use Bound::*;
         match self.upper_bound() {
             Some(Include(ref b)) => Some(b.clone()),
             Some(Exclude(ref b)) => Some(b.clone()),
+            _ => None,
+        }
+    }
+
+    /// Returns the greatest lower bound and least upper bound of the interval,
+    /// if they both exist.
+    pub fn extrema(&self) -> Option<(T, T)> {
+        match (self.infimum(), self.supremum()) {
+            (Some(l), Some(u)) => Some((l, u)),
             _ => None,
         }
     }
@@ -544,6 +573,14 @@ impl<T> RawInterval<T> where T: Ord + Clone {
         } else {
            Vec::new()
         }.into_iter()
+    }
+}
+
+
+impl<T> RawInterval<T> where T: Ord + Clone + std::ops::Sub<T, Output=T> {
+    /// Returns the width of the interval if it is bounded.
+    pub fn width(&self) -> Option<T> {
+        todo!()
     }
 }
 

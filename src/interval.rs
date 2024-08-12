@@ -823,6 +823,51 @@ impl<T> Interval<T>
     // Bound accessors
     ////////////////////////////////////////////////////////////////////////////
 
+    
+    /// Returns the lower and upper [`Bound`]s of the `Interval`, or `None` if
+    /// the `Interval` is [`empty`].
+    ///
+    /// [`Bound`]: bound/enum.Bound.html
+    /// [`empty`]: #method.empty
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::closed(-3, 5);
+    /// assert_eq!(interval.bounds(), Some((Include(-3), Include(5))));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use normalize_interval::Bound::*;
+    /// # use normalize_interval::Interval;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::open(-3, 5);
+    /// 
+    /// assert_eq!(interval.bounds(), Some((Include(-2), Include(4))));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn bounds(&self) -> Option<(Bound<T>, Bound<T>)> {
+        self.0.bounds()
+    }
+
     /// Returns the lower [`Bound`] of the `Interval`, or `None` if the 
     /// `Interval` is [`empty`].
     ///
@@ -906,6 +951,7 @@ impl<T> Interval<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn upper_bound(&self) -> Option<Bound<T>> {
         self.0.upper_bound()
     }
@@ -946,6 +992,7 @@ impl<T> Interval<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn infimum(&self) -> Option<T> {
         self.0.infimum()
     }
@@ -987,8 +1034,50 @@ impl<T> Interval<T>
     /// # }
     /// ```
     #[inline]
+    #[must_use]
     pub fn supremum(&self) -> Option<T> {
         self.0.supremum()
+    }
+
+    /// Returns the greatest lower bound and least upper bound of the
+    /// `Interval`, or `None` if the `Interval` is [`empty`] or unbounded.
+    ///
+    /// [`empty`]: #method.empty
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use normalize_interval::Interval;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::closed(-3, 5);
+    /// assert_eq!(interval.extrema(), Some((-3, 5)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Finite`] types will have their bounds closed:
+    ///
+    /// [`Finite`]: ../normalize/trait.Finite.html
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use normalize_interval::Interval;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::open(-3, 5);
+    /// 
+    /// assert_eq!(interval.extrema(), Some((-2, 4)));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn extrema(&self) -> Option<(T, T)> {
+        self.0.extrema()
     }
 
     /// Returns the size of the `Interval`, or `None` if it is either infinite
