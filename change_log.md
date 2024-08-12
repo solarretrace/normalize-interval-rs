@@ -20,11 +20,18 @@ Implemented changes not yet published.
 + Added methods `Interval::width`, `Interval::bounds`, `Interval::extrema`.
 
 
-## normalize_interval 0.17.3  [2020-08-12]
+## normalize_interval 0.17.3  [2020-08-11]
 ----------------------------------------
 
 ### Added
 + Added support for formatted display traits and formatted parsing of intervals.
+
+
+## normalize_interval 0.14.1  [2020-08-4]
+----------------------------------------
+
+### Added
++ Now supports serde as an optional dependency.
 
 
 ## normalize_interval 0.14.0  [2020-07-18]
@@ -33,6 +40,7 @@ Implemented changes not yet published.
 ### Changed
 + `Selection<T>` now iterates over points by default; interval iterators are given dedicated methods.
 + `TineTree::iter_intervals` renamed to `InteTree::interval_iter` to match the rest of the library.
+
 
 ## normalize_interval 0.13.1  [2020-07-18]
 ----------------------------------------
