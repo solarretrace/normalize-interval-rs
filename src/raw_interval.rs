@@ -391,6 +391,13 @@ impl<T> RawInterval<T> where T: Clone {
     }
 }
 
+impl<T> RawInterval<T> where T: Clone + std::ops::Sub<T> {
+    /// Returns the width of the interval, if it is bounded.
+    pub fn width(&self) -> Option<T::Output> {
+        self.extrema().map(|(l, r)| r - l)
+    }
+}
+
 impl<T> RawInterval<T> where T: Ord + Clone {
     // Set comparisons
     ////////////////////////////////////////////////////////////////////////////
@@ -573,14 +580,6 @@ impl<T> RawInterval<T> where T: Ord + Clone {
         } else {
            Vec::new()
         }.into_iter()
-    }
-}
-
-
-impl<T> RawInterval<T> where T: Ord + Clone + std::ops::Sub<T, Output=T> {
-    /// Returns the width of the interval if it is bounded.
-    pub fn width(&self) -> Option<T> {
-        todo!()
     }
 }
 

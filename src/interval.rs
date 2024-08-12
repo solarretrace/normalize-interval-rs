@@ -1812,6 +1812,33 @@ impl<T> Interval<T>
 }
 
 
+impl<T> Interval<T> 
+    where
+        T: Ord + Clone + Sub<T>,
+        RawInterval<T>: Normalize,
+{
+    /// Returns the width of the `Interval`, if it is bounded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use normalize_interval::Interval;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// # //-------------------------------------------------------------------
+    /// let interval: Interval<i32> = Interval::open(-3, 7);
+    /// assert_eq!(interval.width(), Some(8));
+    /// # //-------------------------------------------------------------------
+    /// #     Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn width(&self) -> Option<T::Output> {
+        self.0.width()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Conversion traits
 ////////////////////////////////////////////////////////////////////////////////
@@ -1836,10 +1863,6 @@ impl<T> From<T> for Interval<T>
         Self(RawInterval::Point(point).normalized())
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Conversion traits
-////////////////////////////////////////////////////////////////////////////////
 
 impl<T> From<Range<T>> for Interval<T>
     where
