@@ -13,6 +13,19 @@ Implemented changes not yet published.
 
 ### Fixed
 
+## normalize_interval 0.17.5  [2020-08-12]
+----------------------------------------
+
+### Added
++ Added methods `Interval::width`, `Interval::bounds`, `Interval::extrema`.
+
+
+## normalize_interval 0.17.3  [2020-08-12]
+----------------------------------------
+
+### Added
++ Added support for formatted display traits and formatted parsing of intervals.
+
 
 ## normalize_interval 0.14.0  [2020-07-18]
 ----------------------------------------
